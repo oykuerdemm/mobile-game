@@ -113,10 +113,19 @@ export class GameScene extends Phaser.Scene {
       this.swapSpritesInPlace(a, b);
       await this.tweenSwap(a, b);
     } else {
-      await this.resolveMatches(matched);
+      await this.resolveCascade();
     }
 
     this.busy = false;
+  }
+
+  /** Repeatedly resolves matches (clear/gravity/refill) until the board has none left. */
+  private async resolveCascade(): Promise<void> {
+    let matched = findMatches(this.grid);
+    while (matched.size > 0) {
+      await this.resolveMatches(matched);
+      matched = findMatches(this.grid);
+    }
   }
 
   private swapSpritesInPlace(a: Position, b: Position): void {

@@ -76,6 +76,27 @@ export function refill(grid: Grid, rng: Rng = Math.random): Grid {
   return next;
 }
 
+export interface CascadeResult {
+  finalGrid: Grid;
+  /** Number of clear+gravity+refill passes applied (1 if there was no chain reaction). */
+  passes: number;
+}
+
+/** Repeatedly clears matches, drops tiles, and refills until the board is stable. */
+export function resolveCascade(grid: Grid, rng: Rng = Math.random): CascadeResult {
+  let current = grid;
+  let passes = 0;
+
+  while (true) {
+    const matched = findMatches(current);
+    if (matched.size === 0) break;
+    current = refill(applyGravity(clearMatches(current, matched)), rng);
+    passes++;
+  }
+
+  return { finalGrid: current, passes };
+}
+
 function cellKey(row: number, col: number): string {
   return `${row},${col}`;
 }

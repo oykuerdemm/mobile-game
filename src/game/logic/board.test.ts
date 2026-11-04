@@ -8,6 +8,7 @@ import {
   generateBoard,
   isValidSwap,
   refill,
+  resolveCascade,
   swapTiles,
 } from './board';
 import { mulberry32 } from './rng';
@@ -185,6 +186,48 @@ describe('refill', () => {
     expect(filled[1][0]).toBe(TileType.Green);
     expect(TILE_TYPES).toContain(filled[0][0]);
     expect(TILE_TYPES).toContain(filled[1][1]);
+  });
+});
+
+describe('resolveCascade', () => {
+  it('resolves a single match in one pass', () => {
+    const grid: Grid = [[TileType.Red, TileType.Red, TileType.Red, TileType.Blue]];
+    const result = resolveCascade(grid, mulberry32(1));
+    expect(result.passes).toBe(1);
+    expect(findMatches(result.finalGrid).size).toBe(0);
+  });
+
+  it('returns 0 passes and the same grid when there is nothing to match', () => {
+    const grid: Grid = [[TileType.Red, TileType.Blue, TileType.Green]];
+    const result = resolveCascade(grid, mulberry32(1));
+    expect(result.passes).toBe(0);
+    expect(result.finalGrid).toEqual(grid);
+  });
+
+  it('chains: clearing a match can bring same-type survivors together in a later pass', () => {
+    // Column 0 has A-A-A at the top and a lone B separated from a B-B pair by an X;
+    // X is also part of a horizontal match in its row, so pass 1 clears both the
+    // A's and the X. That lets the three B's in column 0 fall together — a genuine
+    // second-pass match that did not exist in the original grid.
+    const R = TileType.Red; // A
+    const X = TileType.Blue; // separator, also matches horizontally
+    const G = TileType.Green; // B
+    const Y = TileType.Yellow;
+    const P = TileType.Purple;
+
+    const grid: Grid = [
+      [R, Y, P],
+      [R, P, Y],
+      [R, Y, P],
+      [G, P, Y],
+      [X, X, X],
+      [G, Y, P],
+      [G, P, Y],
+    ];
+
+    const result = resolveCascade(grid, mulberry32(3));
+    expect(result.passes).toBeGreaterThanOrEqual(2);
+    expect(findMatches(result.finalGrid).size).toBe(0);
   });
 });
 
