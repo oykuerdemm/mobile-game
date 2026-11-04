@@ -6,9 +6,11 @@ import {
   createEmptyGrid,
   findMatches,
   generateBoard,
+  hasAvailableMove,
   isValidSwap,
   refill,
   resolveCascade,
+  shuffleBoard,
   swapTiles,
 } from './board';
 import { mulberry32 } from './rng';
@@ -186,6 +188,49 @@ describe('refill', () => {
     expect(filled[1][0]).toBe(TileType.Green);
     expect(TILE_TYPES).toContain(filled[0][0]);
     expect(TILE_TYPES).toContain(filled[1][1]);
+  });
+});
+
+describe('hasAvailableMove', () => {
+  it('is true when some swap would create a match', () => {
+    const grid: Grid = [
+      [TileType.Red, TileType.Red, TileType.Blue],
+      [TileType.Green, TileType.Yellow, TileType.Red],
+    ];
+    expect(hasAvailableMove(grid)).toBe(true);
+  });
+
+  it('is false when the board is too small to ever match', () => {
+    const grid: Grid = [
+      [TileType.Red, TileType.Blue],
+      [TileType.Green, TileType.Yellow],
+    ];
+    expect(hasAvailableMove(grid)).toBe(false);
+  });
+});
+
+describe('shuffleBoard', () => {
+  function tileCounts(grid: Grid): Map<TileType, number> {
+    const counts = new Map<TileType, number>();
+    for (const row of grid) {
+      for (const cell of row) {
+        if (cell !== null) counts.set(cell, (counts.get(cell) ?? 0) + 1);
+      }
+    }
+    return counts;
+  }
+
+  it('preserves the multiset of tiles', () => {
+    const grid = generateBoard(8, 8, mulberry32(5));
+    const shuffled = shuffleBoard(grid, mulberry32(9));
+    expect(tileCounts(shuffled)).toEqual(tileCounts(grid));
+  });
+
+  it('produces a board with no pre-existing matches and at least one available move', () => {
+    const grid = generateBoard(8, 8, mulberry32(5));
+    const shuffled = shuffleBoard(grid, mulberry32(11));
+    expect(findMatches(shuffled).size).toBe(0);
+    expect(hasAvailableMove(shuffled)).toBe(true);
   });
 });
 

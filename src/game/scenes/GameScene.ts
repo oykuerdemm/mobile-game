@@ -1,5 +1,15 @@
 import Phaser from 'phaser';
-import { applyGravity, areAdjacent, clearMatches, findMatches, generateBoard, refill, swapTiles } from '../logic/board';
+import {
+  applyGravity,
+  areAdjacent,
+  clearMatches,
+  findMatches,
+  generateBoard,
+  hasAvailableMove,
+  refill,
+  shuffleBoard,
+  swapTiles,
+} from '../logic/board';
 import { BOARD_HEIGHT, BOARD_WIDTH, type Grid, type Position, type TileType } from '../logic/types';
 import { createTileTextures, textureKeyForTile, TILE_SIZE } from '../render/textures';
 import { tweenPromise } from '../render/tween';
@@ -35,6 +45,9 @@ export class GameScene extends Phaser.Scene {
     this.boardOffsetY = (this.scale.height - boardPixelHeight) / 2;
 
     this.grid = generateBoard(BOARD_WIDTH, BOARD_HEIGHT);
+    if (!hasAvailableMove(this.grid)) {
+      this.grid = shuffleBoard(this.grid);
+    }
     this.sprites = [];
     this.renderBoard();
 
@@ -116,6 +129,10 @@ export class GameScene extends Phaser.Scene {
       await this.resolveCascade();
     }
 
+    if (!hasAvailableMove(this.grid)) {
+      await this.shuffleWithAnimation();
+    }
+
     this.busy = false;
   }
 
@@ -126,6 +143,34 @@ export class GameScene extends Phaser.Scene {
       await this.resolveMatches(matched);
       matched = findMatches(this.grid);
     }
+  }
+
+  /** Fades the board out, reshuffles the tiles, and fades the new layout back in. */
+  private async shuffleWithAnimation(): Promise<void> {
+    const message = this.add
+      .text(this.scale.width / 2, this.boardOffsetY - 40, 'Hamle kalmadı, karıştırılıyor...', {
+        fontFamily: 'sans-serif',
+        fontSize: '26px',
+        color: '#ffffff',
+      })
+      .setOrigin(0.5)
+      .setAlpha(0);
+    await tweenPromise(this, { targets: message, alpha: 1, duration: 200 });
+
+    const oldSprites = this.sprites.flat().filter((sprite): sprite is Sprite => sprite !== null);
+    await Promise.all(oldSprites.map((sprite) => tweenPromise(this, { targets: sprite, alpha: 0, duration: 200 })));
+    oldSprites.forEach((sprite) => sprite.destroy());
+
+    this.grid = shuffleBoard(this.grid);
+    this.sprites = [];
+    this.renderBoard();
+
+    const newSprites = this.sprites.flat().filter((sprite): sprite is Sprite => sprite !== null);
+    newSprites.forEach((sprite) => sprite.setAlpha(0));
+    await Promise.all(newSprites.map((sprite) => tweenPromise(this, { targets: sprite, alpha: 1, duration: 200 })));
+
+    await tweenPromise(this, { targets: message, alpha: 0, duration: 200 });
+    message.destroy();
   }
 
   private swapSpritesInPlace(a: Position, b: Position): void {

@@ -76,6 +76,62 @@ export function refill(grid: Grid, rng: Rng = Math.random): Grid {
   return next;
 }
 
+/** True if any adjacent swap on the board would create a 3+ match. */
+export function hasAvailableMove(grid: Grid): boolean {
+  const height = grid.length;
+  const width = grid[0].length;
+
+  for (let row = 0; row < height; row++) {
+    for (let col = 0; col < width; col++) {
+      if (col + 1 < width && isValidSwap(grid, { row, col }, { row, col: col + 1 })) return true;
+      if (row + 1 < height && isValidSwap(grid, { row, col }, { row: row + 1, col })) return true;
+    }
+  }
+  return false;
+}
+
+function fisherYates<T>(items: T[], rng: Rng): T[] {
+  const result = items.slice();
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
+
+/**
+ * Reshuffles the existing tiles (same multiset) into a new arrangement with no
+ * pre-existing matches and at least one available move. Falls back to a fresh
+ * generated board if no valid shuffle is found within a bounded number of tries.
+ */
+export function shuffleBoard(grid: Grid, rng: Rng = Math.random): Grid {
+  const height = grid.length;
+  const width = grid[0].length;
+  const tiles: TileType[] = [];
+  for (const row of grid) {
+    for (const cell of row) {
+      if (cell !== null) tiles.push(cell);
+    }
+  }
+
+  const maxAttempts = 200;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const shuffled = fisherYates(tiles, rng);
+    const next = createEmptyGrid(width, height);
+    let i = 0;
+    for (let row = 0; row < height; row++) {
+      for (let col = 0; col < width; col++) {
+        next[row][col] = shuffled[i++];
+      }
+    }
+    if (findMatches(next).size === 0 && hasAvailableMove(next)) {
+      return next;
+    }
+  }
+
+  return generateBoard(width, height, rng);
+}
+
 export interface CascadeResult {
   finalGrid: Grid;
   /** Number of clear+gravity+refill passes applied (1 if there was no chain reaction). */
