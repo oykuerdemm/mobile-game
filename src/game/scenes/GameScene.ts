@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import {
   applyGravity,
   areAdjacent,
+  cellKey,
   clearMatches,
   findMatches,
   generateBoard,
@@ -183,14 +184,18 @@ export class GameScene extends Phaser.Scene {
     this.swapSpritesInPlace(a, b);
     await this.tweenSwap(a, b, SWAP_DURATION, 'Quad.easeInOut');
 
+    // Swapping two special tiles together is always a valid move, even if it wouldn't form a normal match.
+    const isCombo = this.specials[a.row][a.col] !== null && this.specials[b.row][b.col] !== null;
     const matched = findMatches(this.grid);
-    if (matched.size === 0) {
+
+    if (!isCombo && matched.size === 0) {
       this.grid = swapTiles(this.grid, a, b);
       this.specials = swapSpecials(this.specials, a, b);
       this.swapSpritesInPlace(a, b);
       await this.tweenSwap(a, b, REVERT_DURATION, 'Back.easeOut');
     } else {
-      const cleared = await this.resolveCascade([a, b]);
+      const comboSeed = isCombo ? new Set([cellKey(a.row, a.col), cellKey(b.row, b.col)]) : null;
+      const cleared = await this.resolveCascade([a, b], comboSeed);
       this.session = applyMove(this.session, cleared);
       this.updateHud();
     }
@@ -257,18 +262,37 @@ export class GameScene extends Phaser.Scene {
     button.on('pointerdown', onClick);
   }
 
-  /** Repeatedly resolves matches (clear/gravity/refill) until the board has none left. Returns how many tiles of each type were cleared, for goal tracking. */
-  private async resolveCascade(swapPositions: [Position, Position] | null): Promise<Map<TileType, number>> {
+  /**
+   * Repeatedly resolves matches (clear/gravity/refill) until the board has none
+   * left. If `comboSeed` is given, the first pass skips match detection
+   * entirely and just activates whatever specials are in the seed (a direct
+   * swap of two specials). Returns how many tiles of each type were cleared,
+   * for goal tracking.
+   */
+  private async resolveCascade(
+    swapPositions: [Position, Position] | null,
+    comboSeed: Set<string> | null = null,
+  ): Promise<Map<TileType, number>> {
     const totalCleared = new Map<TileType, number>();
     let isFirstPass = true;
 
     while (true) {
-      const matched = findMatches(this.grid);
-      if (matched.size === 0) break;
+      let finalClearSet: Set<string>;
+      let spawns: SpecialSpawn[] = [];
 
-      const { spawns, keepPositions } = analyzeMatchShapes(this.grid, matched, isFirstPass ? swapPositions : null);
-      const activated = expandWithSpecials(this.grid, this.specials, matched);
-      const finalClearSet = new Set([...activated].filter((key) => !keepPositions.has(key)));
+      if (isFirstPass && comboSeed) {
+        finalClearSet = expandWithSpecials(this.grid, this.specials, comboSeed);
+      } else {
+        const matched = findMatches(this.grid);
+        if (matched.size === 0) break;
+
+        const analysis = analyzeMatchShapes(this.grid, matched, isFirstPass ? swapPositions : null);
+        spawns = analysis.spawns;
+        const activated = expandWithSpecials(this.grid, this.specials, matched);
+        finalClearSet = new Set([...activated].filter((key) => !analysis.keepPositions.has(key)));
+      }
+
+      if (finalClearSet.size === 0) break;
 
       for (const key of finalClearSet) {
         const [row, col] = key.split(',').map(Number);
