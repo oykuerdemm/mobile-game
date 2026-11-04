@@ -18,6 +18,15 @@ export function areAdjacent(a: Position, b: Position): boolean {
   return rowDelta + colDelta === 1;
 }
 
+/** Returns a new grid with the tiles at the two positions swapped. */
+export function swapTiles(grid: Grid, a: Position, b: Position): Grid {
+  const next = cloneGrid(grid);
+  const temp = next[a.row][a.col];
+  next[a.row][a.col] = next[b.row][b.col];
+  next[b.row][b.col] = temp;
+  return next;
+}
+
 function cellKey(row: number, col: number): string {
   return `${row},${col}`;
 }

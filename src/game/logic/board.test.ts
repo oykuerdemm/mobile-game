@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { areAdjacent, createEmptyGrid, findMatches, generateBoard } from './board';
+import { areAdjacent, createEmptyGrid, findMatches, generateBoard, swapTiles } from './board';
 import { mulberry32 } from './rng';
 import { TILE_TYPES, TileType, type Grid } from './types';
 
@@ -88,6 +88,27 @@ describe('findMatches', () => {
   it('does not match a run of only 2', () => {
     const grid = gridFrom([[TileType.Red, TileType.Red, TileType.Blue]]);
     expect(findMatches(grid).size).toBe(0);
+  });
+});
+
+describe('swapTiles', () => {
+  it('swaps the two cells and leaves the rest untouched', () => {
+    const grid: Grid = [
+      [TileType.Red, TileType.Blue],
+      [TileType.Green, TileType.Yellow],
+    ];
+    const swapped = swapTiles(grid, { row: 0, col: 0 }, { row: 0, col: 1 });
+    expect(swapped).toEqual([
+      [TileType.Blue, TileType.Red],
+      [TileType.Green, TileType.Yellow],
+    ]);
+  });
+
+  it('does not mutate the original grid', () => {
+    const grid: Grid = [[TileType.Red, TileType.Blue]];
+    const original = grid.map((row) => row.slice());
+    swapTiles(grid, { row: 0, col: 0 }, { row: 0, col: 1 });
+    expect(grid).toEqual(original);
   });
 });
 
