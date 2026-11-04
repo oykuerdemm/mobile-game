@@ -174,6 +174,42 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.busy = false;
+
+    if (this.session.status !== 'playing') {
+      this.showEndOverlay();
+    }
+  }
+
+  private showEndOverlay(): void {
+    const won = this.session.status === 'won';
+    const centerX = this.scale.width / 2;
+    const centerY = this.scale.height / 2;
+
+    this.add.rectangle(centerX, centerY, this.scale.width, this.scale.height, 0x000000, 0.75);
+    this.add
+      .text(centerX, centerY - 100, won ? 'Kazandın!' : 'Kaybettin', {
+        fontFamily: 'sans-serif',
+        fontSize: '56px',
+        color: won ? '#2ecc71' : '#e74c3c',
+      })
+      .setOrigin(0.5);
+
+    this.createButton(centerX, centerY + 20, 'Tekrar Dene', () => {
+      this.scene.restart();
+    });
+  }
+
+  private createButton(x: number, y: number, label: string, onClick: () => void): void {
+    const text = this.add.text(0, 0, label, { fontFamily: 'sans-serif', fontSize: '28px', color: '#ffffff' }).setOrigin(0.5);
+    const paddingX = 28;
+    const paddingY = 16;
+    const background = this.add
+      .rectangle(0, 0, text.width + paddingX * 2, text.height + paddingY * 2, 0x3b3b3b)
+      .setStrokeStyle(2, 0xffffff);
+    const button = this.add.container(x, y, [background, text]);
+    button.setSize(background.width, background.height);
+    button.setInteractive({ useHandCursor: true });
+    button.on('pointerdown', onClick);
   }
 
   /** Repeatedly resolves matches (clear/gravity/refill) until the board has none left. Returns how many tiles of each type were cleared, for goal tracking. */
