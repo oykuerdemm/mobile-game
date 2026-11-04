@@ -28,14 +28,14 @@ Sırayla yapılır. Her oturum bir sonraki işaretlenmemiş maddeyi alır.
 - [x] Dikey ekran, ölçeklenen canvas, boş oyun sahnesi
 
 ### M1 — Çekirdek tahta
-- [ ] 8x8 tahta, 5 farklı taş rengi/şekli (renk körlüğü için şekiller de farklı)
-- [ ] Başlangıçta hazır eşleşme olmayan tahta üretimi
-- [ ] Komşu taşları kaydırarak/dokunarak yer değiştirme
-- [ ] 3+ eşleşme tespiti (yatay ve dikey), geçersiz hamlede taşların geri dönmesi
-- [ ] Eşleşen taşların silinmesi, yerçekimi, yeni taşların yukarıdan dolması
-- [ ] Zincirleme (cascade) eşleşmeler
-- [ ] Hamle kalmadığında tahtanın karıştırılması
-- [ ] Temel animasyonlar (swap, silinme, düşme)
+- [x] 8x8 tahta, 5 farklı taş rengi/şekli (renk körlüğü için şekiller de farklı)
+- [x] Başlangıçta hazır eşleşme olmayan tahta üretimi
+- [x] Komşu taşları kaydırarak/dokunarak yer değiştirme
+- [x] 3+ eşleşme tespiti (yatay ve dikey), geçersiz hamlede taşların geri dönmesi
+- [x] Eşleşen taşların silinmesi, yerçekimi, yeni taşların yukarıdan dolması
+- [x] Zincirleme (cascade) eşleşmeler
+- [x] Hamle kalmadığında tahtanın karıştırılması
+- [x] Temel animasyonlar (swap, silinme, düşme)
 
 ### M2 — Level yapısı
 - [ ] Hamle limiti ve hedef (ör. 20 kırmızı taş topla)
