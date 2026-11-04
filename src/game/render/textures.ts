@@ -73,8 +73,32 @@ export function createSpecialTileTextures(scene: Phaser.Scene): void {
     graphics.fillCircle(center, center, size * 0.44);
     graphics.strokeCircle(center, center, size * 0.3);
     graphics.generateTexture(specialTextureKey(SpecialKind.Bomb, color), size, size);
+
+    graphics.clear();
+    graphics.fillStyle(TILE_COLORS[color], 1);
+    graphics.lineStyle(2, 0xffffff, 1);
+    drawSparkle(graphics, center, center, 8, size * 0.46, size * 0.16);
+    graphics.strokePoints(sparklePoints(center, center, 8, size * 0.46, size * 0.16), true);
+    graphics.generateTexture(specialTextureKey(SpecialKind.ColorClear, color), size, size);
   }
   graphics.destroy();
+}
+
+function sparklePoints(cx: number, cy: number, spikes: number, outerRadius: number, innerRadius: number): Phaser.Math.Vector2[] {
+  const points: Phaser.Math.Vector2[] = [];
+  const step = Math.PI / spikes;
+  let rot = -Math.PI / 2;
+  for (let i = 0; i < spikes; i++) {
+    points.push(new Phaser.Math.Vector2(cx + Math.cos(rot) * outerRadius, cy + Math.sin(rot) * outerRadius));
+    rot += step;
+    points.push(new Phaser.Math.Vector2(cx + Math.cos(rot) * innerRadius, cy + Math.sin(rot) * innerRadius));
+    rot += step;
+  }
+  return points;
+}
+
+function drawSparkle(g: Phaser.GameObjects.Graphics, cx: number, cy: number, spikes: number, outerRadius: number, innerRadius: number): void {
+  g.fillPoints(sparklePoints(cx, cy, spikes, outerRadius, innerRadius), true);
 }
 
 function drawPolygon(

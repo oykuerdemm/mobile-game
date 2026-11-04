@@ -172,10 +172,10 @@ function sharedCell(a: Run, b: Run): Position | undefined {
  * form a shape that spawns a special tile:
  * - an L/T (a horizontal and a vertical run of 3+ sharing one cell) spawns a
  *   Bomb at the intersection, taking priority over the plain-line case below;
- * - a plain 4-in-a-row spawns a RowClear/ColClear at whichever swapped
- *   position is part of the run (falling back to the run's center for
- *   cascade-born matches, when `swapPositions` is null).
- * 5+ runs are handled elsewhere as those land.
+ * - a plain 4-in-a-row spawns a RowClear/ColClear, and a 5+-in-a-row spawns a
+ *   ColorClear, both at whichever swapped position is part of the run
+ *   (falling back to the run's center for cascade-born matches, when
+ *   `swapPositions` is null).
  */
 export function analyzeMatchShapes(
   grid: Grid,
@@ -205,12 +205,18 @@ export function analyzeMatchShapes(
   }
 
   for (const run of runs) {
-    if (consumed.has(run) || run.cells.length !== 4) continue;
+    if (consumed.has(run)) continue;
 
-    const position = pickSpawnPosition(run.cells, swapPositions);
-    const kind = run.orientation === 'horizontal' ? SpecialKind.RowClear : SpecialKind.ColClear;
-    spawns.push({ position, tile: { kind, color: run.color } });
-    keepPositions.add(cellKey(position.row, position.col));
+    if (run.cells.length >= 5) {
+      const position = pickSpawnPosition(run.cells, swapPositions);
+      spawns.push({ position, tile: { kind: SpecialKind.ColorClear, color: run.color } });
+      keepPositions.add(cellKey(position.row, position.col));
+    } else if (run.cells.length === 4) {
+      const position = pickSpawnPosition(run.cells, swapPositions);
+      const kind = run.orientation === 'horizontal' ? SpecialKind.RowClear : SpecialKind.ColClear;
+      spawns.push({ position, tile: { kind, color: run.color } });
+      keepPositions.add(cellKey(position.row, position.col));
+    }
   }
 
   return { spawns, keepPositions };

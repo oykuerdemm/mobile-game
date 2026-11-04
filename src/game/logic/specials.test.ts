@@ -209,6 +209,19 @@ describe('analyzeMatchShapes', () => {
     expect(keepPositions).toEqual(new Set(['1,1']));
   });
 
+  it('spawns a ColorClear for a 5-in-a-row match', () => {
+    const grid: Grid = [[TileType.Red, TileType.Red, TileType.Red, TileType.Red, TileType.Red, TileType.Blue]];
+    const matched = new Set(['0,0', '0,1', '0,2', '0,3', '0,4']);
+    const { spawns, keepPositions } = analyzeMatchShapes(grid, matched, [
+      { row: 0, col: 1 },
+      { row: 9, col: 9 },
+    ]);
+    expect(spawns).toEqual([
+      { position: { row: 0, col: 1 }, tile: { kind: SpecialKind.ColorClear, color: TileType.Red } },
+    ]);
+    expect(keepPositions).toEqual(new Set(['0,1']));
+  });
+
   it('an L/T intersection takes priority over treating either arm as a plain 4-match', () => {
     // Horizontal run row1 (cols 0-3, length 4) crosses vertical run col1 (rows 0-2) at (1,1).
     const R = TileType.Red;
