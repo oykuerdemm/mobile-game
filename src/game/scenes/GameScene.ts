@@ -16,13 +16,14 @@ import { tweenPromise } from '../render/tween';
 
 const CELL_SIZE = 80;
 const SPRITE_SCALE = (CELL_SIZE * 0.82) / TILE_SIZE;
-const SWAP_DURATION = 140;
-const REVERT_DURATION = 180;
-const CLEAR_DURATION = 160;
-const FALL_DURATION_BASE = 90;
-const FALL_DURATION_PER_ROW = 45;
-const FALL_DURATION_MIN = 140;
-const FALL_DURATION_MAX = 420;
+const SWAP_DURATION = 112;
+const REVERT_DURATION = 144;
+const CLEAR_DURATION = 128;
+const FALL_DURATION_BASE = 72;
+const FALL_DURATION_PER_ROW = 36;
+const FALL_DURATION_MIN = 112;
+const FALL_DURATION_MAX = 336;
+const SHUFFLE_FADE_DURATION = 160;
 const DRAG_THRESHOLD = CELL_SIZE * 0.3;
 
 function fallDuration(rowsFallen: number): number {
@@ -163,10 +164,10 @@ export class GameScene extends Phaser.Scene {
       })
       .setOrigin(0.5)
       .setAlpha(0);
-    await tweenPromise(this, { targets: message, alpha: 1, duration: 200 });
+    await tweenPromise(this, { targets: message, alpha: 1, duration: SHUFFLE_FADE_DURATION });
 
     const oldSprites = this.sprites.flat().filter((sprite): sprite is Sprite => sprite !== null);
-    await Promise.all(oldSprites.map((sprite) => tweenPromise(this, { targets: sprite, alpha: 0, duration: 200 })));
+    await Promise.all(oldSprites.map((sprite) => tweenPromise(this, { targets: sprite, alpha: 0, duration: SHUFFLE_FADE_DURATION })));
     oldSprites.forEach((sprite) => sprite.destroy());
 
     this.grid = shuffleBoard(this.grid);
@@ -175,9 +176,9 @@ export class GameScene extends Phaser.Scene {
 
     const newSprites = this.sprites.flat().filter((sprite): sprite is Sprite => sprite !== null);
     newSprites.forEach((sprite) => sprite.setAlpha(0));
-    await Promise.all(newSprites.map((sprite) => tweenPromise(this, { targets: sprite, alpha: 1, duration: 200 })));
+    await Promise.all(newSprites.map((sprite) => tweenPromise(this, { targets: sprite, alpha: 1, duration: SHUFFLE_FADE_DURATION })));
 
-    await tweenPromise(this, { targets: message, alpha: 0, duration: 200 });
+    await tweenPromise(this, { targets: message, alpha: 0, duration: SHUFFLE_FADE_DURATION });
     message.destroy();
   }
 
