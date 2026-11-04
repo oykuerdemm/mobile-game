@@ -10,7 +10,8 @@ import {
   shuffleBoard,
   swapTiles,
 } from '../logic/board';
-import { BOARD_HEIGHT, BOARD_WIDTH, type Grid, type Position, type TileType } from '../logic/types';
+import { applyMove, createSession, type LevelConfig, type SessionState } from '../logic/level';
+import { BOARD_HEIGHT, BOARD_WIDTH, type Grid, type Position, TileType } from '../logic/types';
 import { createTileTextures, textureKeyForTile, TILE_SIZE } from '../render/textures';
 import { tweenPromise } from '../render/tween';
 
@@ -26,6 +27,9 @@ const FALL_DURATION_MAX = 336;
 const SHUFFLE_FADE_DURATION = 160;
 const DRAG_THRESHOLD = CELL_SIZE * 0.3;
 
+// Temporary until M2's JSON level loading replaces this with real level data.
+const DEMO_LEVEL: LevelConfig = { id: 1, moveLimit: 20, goal: { type: TileType.Red, count: 20 } };
+
 function fallDuration(rowsFallen: number): number {
   return Phaser.Math.Clamp(FALL_DURATION_BASE + rowsFallen * FALL_DURATION_PER_ROW, FALL_DURATION_MIN, FALL_DURATION_MAX);
 }
@@ -40,6 +44,7 @@ export class GameScene extends Phaser.Scene {
   private dragOrigin: Position | null = null;
   private dragTriggered = false;
   private busy = false;
+  private session!: SessionState;
 
   constructor() {
     super('GameScene');
@@ -47,6 +52,7 @@ export class GameScene extends Phaser.Scene {
 
   create(): void {
     createTileTextures(this);
+    this.session = createSession(DEMO_LEVEL);
 
     const boardPixelWidth = CELL_SIZE * BOARD_WIDTH;
     const boardPixelHeight = CELL_SIZE * BOARD_HEIGHT;
@@ -94,7 +100,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private handlePointerDown(position: Position): void {
-    if (this.busy) return;
+    if (this.busy || this.session.status !== 'playing') return;
     this.dragOrigin = position;
     this.dragTriggered = false;
   }
@@ -135,23 +141,31 @@ export class GameScene extends Phaser.Scene {
       this.swapSpritesInPlace(a, b);
       await this.tweenSwap(a, b, REVERT_DURATION, 'Back.easeOut');
     } else {
-      await this.resolveCascade();
+      const cleared = await this.resolveCascade();
+      this.session = applyMove(this.session, cleared);
     }
 
-    if (!hasAvailableMove(this.grid)) {
+    if (this.session.status === 'playing' && !hasAvailableMove(this.grid)) {
       await this.shuffleWithAnimation();
     }
 
     this.busy = false;
   }
 
-  /** Repeatedly resolves matches (clear/gravity/refill) until the board has none left. */
-  private async resolveCascade(): Promise<void> {
+  /** Repeatedly resolves matches (clear/gravity/refill) until the board has none left. Returns how many tiles of each type were cleared, for goal tracking. */
+  private async resolveCascade(): Promise<Map<TileType, number>> {
+    const totalCleared = new Map<TileType, number>();
     let matched = findMatches(this.grid);
     while (matched.size > 0) {
+      for (const key of matched) {
+        const [row, col] = key.split(',').map(Number);
+        const type = this.grid[row][col];
+        if (type !== null) totalCleared.set(type, (totalCleared.get(type) ?? 0) + 1);
+      }
       await this.resolveMatches(matched);
       matched = findMatches(this.grid);
     }
+    return totalCleared;
   }
 
   /** Fades the board out, reshuffles the tiles, and fades the new layout back in. */
