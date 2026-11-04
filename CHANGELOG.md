@@ -13,6 +13,9 @@ Nasıl test edilir:
 - `npm install && npm run dev`, tarayıcıda `http://localhost:5173/mobile-game/` adresini aç. Ortada başlık yazısını görmelisin, pencere boyutunu değiştirince canvas dikey oranını koruyarak ölçeklenmeli.
 - `npm run build` ve `npm test` hatasız geçmeli.
 
+Doğrulama (güncelleme):
+- GitHub Pages ayarlarında "Source: GitHub Actions" seçilip ilk deploy tetiklendi; `https://oykuerdemm.github.io/mobile-game/` canlı (HTTP 200).
+- Claude in Chrome ile görsel kontrol yapıldı: hem geniş ekranda hem telefon boyutunda (390x844) canvas dikey oranını koruyarak ortalanıp ölçekleniyor, "Match-3 Prototip" yazısı ortada görünüyor.
+
 Bilinen sorunlar / yapılamayanlar:
-- Bu oturumda tarayıcı otomasyon aracı (Claude in Chrome) bağlı değildi, dolayısıyla dokunma/kaydırma ve gerçek telefon/tarayıcı görsel testi yapılamadı. Sadece `npm run build`, `npm test` ve curl ile dev server yanıtı doğrulandı. Bir sonraki oturumda veya kullanıcı tarafından telefon/tarayıcıda görsel+dokunma testi yapılmalı.
-- GitHub Pages ilk deploy'dan önce repo ayarlarında manuel bir adım gerekiyor (bkz. aşağıdaki not).
+- Gerçek bir fiziksel telefonda dokunma/kaydırma testi henüz yapılmadı (tarayıcı simülasyonuyla doğrulandı). M1'de dokunma ile taş kaydırma eklenince tekrar kontrol edilmeli.
