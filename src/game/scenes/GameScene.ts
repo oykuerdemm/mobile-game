@@ -10,8 +10,9 @@ import {
   shuffleBoard,
   swapTiles,
 } from '../logic/board';
-import { applyMove, createSession, type LevelConfig, type SessionState } from '../logic/level';
-import { BOARD_HEIGHT, BOARD_WIDTH, type Grid, type Position, TileType } from '../logic/types';
+import { applyMove, createSession, type SessionState } from '../logic/level';
+import { getLevelById } from '../logic/levels';
+import { BOARD_HEIGHT, BOARD_WIDTH, type Grid, type Position, type TileType } from '../logic/types';
 import { createTileTextures, textureKeyForTile, TILE_SIZE } from '../render/textures';
 import { tweenPromise } from '../render/tween';
 
@@ -27,9 +28,6 @@ const FALL_DURATION_MAX = 336;
 const SHUFFLE_FADE_DURATION = 160;
 const DRAG_THRESHOLD = CELL_SIZE * 0.3;
 const HUD_HEIGHT = 200;
-
-// Temporary until M2's JSON level loading replaces this with real level data.
-const DEMO_LEVEL: LevelConfig = { id: 1, moveLimit: 20, goal: { type: TileType.Red, count: 20 } };
 
 function fallDuration(rowsFallen: number): number {
   return Phaser.Math.Clamp(FALL_DURATION_BASE + rowsFallen * FALL_DURATION_PER_ROW, FALL_DURATION_MIN, FALL_DURATION_MAX);
@@ -48,14 +46,22 @@ export class GameScene extends Phaser.Scene {
   private session!: SessionState;
   private goalText!: Phaser.GameObjects.Text;
   private movesText!: Phaser.GameObjects.Text;
+  private levelId!: number;
 
   constructor() {
     super('GameScene');
   }
 
+  init(data: { levelId?: number }): void {
+    // Defaults to level 1 when started directly (e.g. before the level select screen existed).
+    this.levelId = data?.levelId ?? 1;
+  }
+
   create(): void {
     createTileTextures(this);
-    this.session = createSession(DEMO_LEVEL);
+    const level = getLevelById(this.levelId);
+    if (!level) throw new Error(`Unknown level id: ${this.levelId}`);
+    this.session = createSession(level);
 
     const boardPixelWidth = CELL_SIZE * BOARD_WIDTH;
     const boardPixelHeight = CELL_SIZE * BOARD_HEIGHT;
@@ -195,7 +201,7 @@ export class GameScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     this.createButton(centerX, centerY + 20, 'Tekrar Dene', () => {
-      this.scene.restart();
+      this.scene.restart({ levelId: this.levelId });
     });
   }
 
