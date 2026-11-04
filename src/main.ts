@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { GameScene } from './game/scenes/GameScene';
+import { LevelSelectScene } from './game/scenes/LevelSelectScene';
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -11,7 +12,7 @@ const config: Phaser.Types.Core.GameConfig = {
     width: 720,
     height: 1280,
   },
-  scene: [GameScene],
+  scene: [LevelSelectScene, GameScene],
 };
 
 new Phaser.Game(config);

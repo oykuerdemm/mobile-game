@@ -12,6 +12,7 @@ import {
 } from '../logic/board';
 import { applyMove, createSession, type SessionState } from '../logic/level';
 import { getLevelById } from '../logic/levels';
+import { markLevelCompleted } from '../logic/progress';
 import { BOARD_HEIGHT, BOARD_WIDTH, type Grid, type Position, type TileType } from '../logic/types';
 import { createTileTextures, textureKeyForTile, TILE_SIZE } from '../render/textures';
 import { tweenPromise } from '../render/tween';
@@ -53,7 +54,6 @@ export class GameScene extends Phaser.Scene {
   }
 
   init(data: { levelId?: number }): void {
-    // Defaults to level 1 when started directly (e.g. before the level select screen existed).
     this.levelId = data?.levelId ?? 1;
   }
 
@@ -191,17 +191,36 @@ export class GameScene extends Phaser.Scene {
     const centerX = this.scale.width / 2;
     const centerY = this.scale.height / 2;
 
+    if (won) {
+      markLevelCompleted(window.localStorage, this.levelId);
+    }
+
     this.add.rectangle(centerX, centerY, this.scale.width, this.scale.height, 0x000000, 0.75);
     this.add
-      .text(centerX, centerY - 100, won ? 'Kazandın!' : 'Kaybettin', {
+      .text(centerX, centerY - 160, won ? 'Kazandın!' : 'Kaybettin', {
         fontFamily: 'sans-serif',
         fontSize: '56px',
         color: won ? '#2ecc71' : '#e74c3c',
       })
       .setOrigin(0.5);
 
-    this.createButton(centerX, centerY + 20, 'Tekrar Dene', () => {
+    let buttonY = centerY - 60;
+    const nextLevel = won ? getLevelById(this.levelId + 1) : undefined;
+
+    if (nextLevel) {
+      this.createButton(centerX, buttonY, 'Sonraki Level', () => {
+        this.scene.start('GameScene', { levelId: nextLevel.id });
+      });
+      buttonY += 90;
+    }
+
+    this.createButton(centerX, buttonY, 'Tekrar Dene', () => {
       this.scene.restart({ levelId: this.levelId });
+    });
+    buttonY += 90;
+
+    this.createButton(centerX, buttonY, 'Level Seçimi', () => {
+      this.scene.start('LevelSelectScene');
     });
   }
 
