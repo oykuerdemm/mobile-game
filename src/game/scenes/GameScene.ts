@@ -83,7 +83,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private createHud(): void {
-    const hudY = HUD_HEIGHT / 2;
+    const hudY = HUD_HEIGHT / 2 + 20;
     this.add.image(60, hudY, textureKeyForTile(this.session.level.goal.type)).setScale(SPRITE_SCALE);
     this.goalText = this.add
       .text(100, hudY, '', { fontFamily: 'sans-serif', fontSize: '32px', color: '#ffffff' })
@@ -92,6 +92,10 @@ export class GameScene extends Phaser.Scene {
       .text(this.scale.width - 30, hudY, '', { fontFamily: 'sans-serif', fontSize: '32px', color: '#ffffff' })
       .setOrigin(1, 0.5);
     this.updateHud();
+
+    this.createButton(this.scale.width / 2, 36, 'Menü', () => {
+      this.scene.start('LevelSelectScene');
+    });
   }
 
   private updateHud(): void {

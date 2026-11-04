@@ -73,7 +73,17 @@ Sırayla yapılır. Her oturum bir sonraki işaretlenmemiş maddeyi alır.
 ## Öneriler
 Oturumlar sırasında akla gelen ama backlog'da olmayan fikirler buraya yazılır. Onaylanmadan uygulanmaz.
 
-- M2 sırasında fark edildi: level oynanırken (kazanma/kaybetme ekranı gelmeden) level seçimine dönecek bir "geri" butonu yok. Şu an oyuncu sadece kazanıp/kaybedip ekrandaki "Level Seçimi" butonuyla çıkabiliyor. Küçük bir UX eklentisi olabilir.
-
 ## Playtest notları
 Oynadıktan sonra notlarını buraya yaz. Bir sonraki oturum bunları okur ve gerekirse backlog'a ekler.
+
+
+### 2026-11-04
+- Animasyonlar biraz yavaş, hafifçe hızlandırılmalı (swap, silinme, düşme)
+- Taş boyutu telefonda iyi
+- Hata fark etmedim
+- Zincirleme eşleşmeler normal hissettiriyor
+
+### 2026-11-04 (M2)
+- Level'lar çok kolay, hamle sayısı fazla
+- Yeni gelen taşlar çok sık hemen eşleşiyor, bir hamlede bir iki satır siliniyor
+- Menü düzeni iyi
