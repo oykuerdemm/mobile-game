@@ -19,7 +19,7 @@ describe('LEVELS', () => {
 
 describe('getLevelById', () => {
   it('finds a level by id', () => {
-    expect(getLevelById(1)?.moveLimit).toBe(25);
+    expect(getLevelById(1)?.moveLimit).toBe(21);
   });
 
   it('returns undefined for an id that does not exist', () => {

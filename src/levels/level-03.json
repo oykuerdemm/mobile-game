@@ -1,5 +1,5 @@
 {
   "id": 3,
-  "moveLimit": 20,
-  "goal": { "type": "green", "count": 20 }
+  "moveLimit": 19,
+  "goal": { "type": "green", "count": 12 }
 }
