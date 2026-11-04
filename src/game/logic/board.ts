@@ -197,11 +197,11 @@ export function resolveCascade(grid: Grid, rng: Rng = Math.random): CascadeResul
   return { finalGrid: current, passes };
 }
 
-function cellKey(row: number, col: number): string {
+export function cellKey(row: number, col: number): string {
   return `${row},${col}`;
 }
 
-function markRuns(cells: Cell[], onRun: (start: number, end: number) => void): void {
+export function markRuns(cells: Cell[], onRun: (start: number, end: number) => void): void {
   let runStart = 0;
   for (let i = 1; i <= cells.length; i++) {
     const prevType = cells[i - 1];

@@ -14,8 +14,18 @@ import { DEFAULT_DIFFICULTY } from '../logic/difficulty';
 import { applyMove, createSession, type SessionState } from '../logic/level';
 import { getLevelById } from '../logic/levels';
 import { markLevelCompleted } from '../logic/progress';
-import { BOARD_HEIGHT, BOARD_WIDTH, type Grid, type Position, type TileType } from '../logic/types';
-import { createTileTextures, textureKeyForTile, TILE_SIZE } from '../render/textures';
+import {
+  analyzeMatchShapes,
+  applyGravityToSpecials,
+  clearSpecialsAt,
+  createEmptySpecialBoard,
+  expandWithSpecials,
+  placeSpecials,
+  swapSpecials,
+  type SpecialSpawn,
+} from '../logic/specials';
+import { BOARD_HEIGHT, BOARD_WIDTH, type Grid, type Position, type SpecialBoard, type TileType } from '../logic/types';
+import { createSpecialTileTextures, createTileTextures, specialTextureKey, textureKeyForTile, TILE_SIZE } from '../render/textures';
 import { tweenPromise } from '../render/tween';
 
 const CELL_SIZE = 80;
@@ -39,6 +49,7 @@ type Sprite = Phaser.GameObjects.Image;
 
 export class GameScene extends Phaser.Scene {
   private grid!: Grid;
+  private specials!: SpecialBoard;
   private sprites!: (Sprite | null)[][];
   private boardOffsetX = 0;
   private boardOffsetY = 0;
@@ -60,6 +71,7 @@ export class GameScene extends Phaser.Scene {
 
   create(): void {
     createTileTextures(this);
+    createSpecialTileTextures(this);
     const level = getLevelById(this.levelId);
     if (!level) throw new Error(`Unknown level id: ${this.levelId}`);
     this.session = createSession(level);
@@ -76,6 +88,7 @@ export class GameScene extends Phaser.Scene {
     if (!hasAvailableMove(this.grid)) {
       this.grid = shuffleBoard(this.grid);
     }
+    this.specials = createEmptySpecialBoard(BOARD_WIDTH, BOARD_HEIGHT);
     this.sprites = [];
     this.renderBoard();
 
@@ -166,16 +179,18 @@ export class GameScene extends Phaser.Scene {
     this.busy = true;
 
     this.grid = swapTiles(this.grid, a, b);
+    this.specials = swapSpecials(this.specials, a, b);
     this.swapSpritesInPlace(a, b);
     await this.tweenSwap(a, b, SWAP_DURATION, 'Quad.easeInOut');
 
     const matched = findMatches(this.grid);
     if (matched.size === 0) {
       this.grid = swapTiles(this.grid, a, b);
+      this.specials = swapSpecials(this.specials, a, b);
       this.swapSpritesInPlace(a, b);
       await this.tweenSwap(a, b, REVERT_DURATION, 'Back.easeOut');
     } else {
-      const cleared = await this.resolveCascade();
+      const cleared = await this.resolveCascade([a, b]);
       this.session = applyMove(this.session, cleared);
       this.updateHud();
     }
@@ -243,17 +258,26 @@ export class GameScene extends Phaser.Scene {
   }
 
   /** Repeatedly resolves matches (clear/gravity/refill) until the board has none left. Returns how many tiles of each type were cleared, for goal tracking. */
-  private async resolveCascade(): Promise<Map<TileType, number>> {
+  private async resolveCascade(swapPositions: [Position, Position] | null): Promise<Map<TileType, number>> {
     const totalCleared = new Map<TileType, number>();
-    let matched = findMatches(this.grid);
-    while (matched.size > 0) {
-      for (const key of matched) {
+    let isFirstPass = true;
+
+    while (true) {
+      const matched = findMatches(this.grid);
+      if (matched.size === 0) break;
+
+      const { spawns, keepPositions } = analyzeMatchShapes(this.grid, matched, isFirstPass ? swapPositions : null);
+      const activated = expandWithSpecials(this.grid, this.specials, matched);
+      const finalClearSet = new Set([...activated].filter((key) => !keepPositions.has(key)));
+
+      for (const key of finalClearSet) {
         const [row, col] = key.split(',').map(Number);
         const type = this.grid[row][col];
         if (type !== null) totalCleared.set(type, (totalCleared.get(type) ?? 0) + 1);
       }
-      await this.resolveMatches(matched);
-      matched = findMatches(this.grid);
+
+      await this.resolveMatches(finalClearSet, spawns);
+      isFirstPass = false;
     }
     return totalCleared;
   }
@@ -275,6 +299,7 @@ export class GameScene extends Phaser.Scene {
     oldSprites.forEach((sprite) => sprite.destroy());
 
     this.grid = shuffleBoard(this.grid);
+    this.specials = createEmptySpecialBoard(BOARD_WIDTH, BOARD_HEIGHT);
     this.sprites = [];
     this.renderBoard();
 
@@ -307,17 +332,30 @@ export class GameScene extends Phaser.Scene {
     ]);
   }
 
-  /** Clears the given matches, applies gravity, and refills empty cells from the top — one pass, no cascade. */
-  private async resolveMatches(matched: Set<string>): Promise<void> {
+  /** Clears the given matches (spawning any new specials first), applies gravity, and refills from the top. */
+  private async resolveMatches(matched: Set<string>, spawns: SpecialSpawn[]): Promise<void> {
+    this.specials = placeSpecials(this.specials, spawns);
+    this.applySpecialTextures(spawns);
+
     this.grid = clearMatches(this.grid, matched);
+    this.specials = clearSpecialsAt(this.specials, matched);
     await this.animateClear(matched);
 
+    const beforeGravity = this.grid;
     this.grid = applyGravity(this.grid);
+    this.specials = applyGravityToSpecials(beforeGravity, this.specials);
     await this.animateGravity();
 
     const beforeRefill = this.grid;
     this.grid = refill(this.grid, Math.random, DEFAULT_DIFFICULTY.refillAvoidMatchChance);
     await this.animateRefill(beforeRefill, this.grid);
+  }
+
+  private applySpecialTextures(spawns: SpecialSpawn[]): void {
+    for (const spawn of spawns) {
+      const sprite = this.sprites[spawn.position.row][spawn.position.col];
+      sprite?.setTexture(specialTextureKey(spawn.tile.kind, spawn.tile.color));
+    }
   }
 
   private async animateClear(matched: Set<string>): Promise<void> {

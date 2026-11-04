@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { TileType } from '../logic/types';
+import { SpecialKind, TileType } from '../logic/types';
 
 export const TILE_SIZE = 64;
 
@@ -35,6 +35,37 @@ export function createTileTextures(scene: Phaser.Scene): void {
     graphics.fillStyle(TILE_COLORS[type], 1);
     shapes[type]();
     graphics.generateTexture(textureKeyForTile(type), size, size);
+  }
+  graphics.destroy();
+}
+
+export function specialTextureKey(kind: SpecialKind, color: TileType): string {
+  return `special-${kind}-${color}`;
+}
+
+/** Draws one procedural texture per (special kind, color) combination: a bar for row/col clears. */
+export function createSpecialTileTextures(scene: Phaser.Scene): void {
+  const graphics = scene.make.graphics({}, false);
+  const size = TILE_SIZE;
+  const center = size / 2;
+  const thickness = size * 0.4;
+  const length = size * 0.86;
+
+  for (const color of [TileType.Red, TileType.Blue, TileType.Green, TileType.Yellow, TileType.Purple]) {
+    graphics.clear();
+    graphics.fillStyle(TILE_COLORS[color], 1);
+    graphics.lineStyle(3, 0xffffff, 1);
+
+    graphics.fillRoundedRect(center - length / 2, center - thickness / 2, length, thickness, thickness / 2);
+    graphics.strokeRoundedRect(center - length / 2, center - thickness / 2, length, thickness, thickness / 2);
+    graphics.generateTexture(specialTextureKey(SpecialKind.RowClear, color), size, size);
+
+    graphics.clear();
+    graphics.fillStyle(TILE_COLORS[color], 1);
+    graphics.lineStyle(3, 0xffffff, 1);
+    graphics.fillRoundedRect(center - thickness / 2, center - length / 2, thickness, length, thickness / 2);
+    graphics.strokeRoundedRect(center - thickness / 2, center - length / 2, thickness, length, thickness / 2);
+    graphics.generateTexture(specialTextureKey(SpecialKind.ColClear, color), size, size);
   }
   graphics.destroy();
 }
