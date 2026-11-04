@@ -63,12 +63,56 @@ export function applyGravity(grid: Grid): Grid {
   return next;
 }
 
-/** Fills every null cell with a new random tile type. */
-export function refill(grid: Grid, rng: Rng = Math.random): Grid {
+/** Forbidden types for the given cell: ones that would complete a 3+ run with its current neighbors. */
+function forbiddenTypesAt(grid: Grid, row: number, col: number): Set<TileType> {
+  const height = grid.length;
+  const width = grid[0].length;
+  const forbidden = new Set<TileType>();
+
+  const left1 = col >= 1 ? grid[row][col - 1] : null;
+  const left2 = col >= 2 ? grid[row][col - 2] : null;
+  if (left1 !== null && left1 === left2) forbidden.add(left1);
+
+  const right1 = col + 1 < width ? grid[row][col + 1] : null;
+  const right2 = col + 2 < width ? grid[row][col + 2] : null;
+  if (right1 !== null && right1 === right2) forbidden.add(right1);
+
+  if (left1 !== null && left1 === right1) forbidden.add(left1);
+
+  const up1 = row >= 1 ? grid[row - 1][col] : null;
+  const up2 = row >= 2 ? grid[row - 2][col] : null;
+  if (up1 !== null && up1 === up2) forbidden.add(up1);
+
+  const down1 = row + 1 < height ? grid[row + 1][col] : null;
+  const down2 = row + 2 < height ? grid[row + 2][col] : null;
+  if (down1 !== null && down1 === down2) forbidden.add(down1);
+
+  if (up1 !== null && up1 === down1) forbidden.add(up1);
+
+  return forbidden;
+}
+
+/**
+ * Fills every null cell with a new random tile type.
+ *
+ * `avoidMatchChance` (0-1) is the probability that a given refilled tile avoids
+ * completing an immediate match with its neighbors (survivors below/beside it,
+ * or other tiles already placed earlier in this same refill pass) — it reduces
+ * but, below 1, does not eliminate the chance of an instant chain reaction.
+ * Defaults to 0 (fully random, the original behavior) so existing callers are
+ * unaffected; GameScene passes the configured difficulty value explicitly.
+ */
+export function refill(grid: Grid, rng: Rng = Math.random, avoidMatchChance = 0): Grid {
   const next = cloneGrid(grid);
   for (let row = 0; row < next.length; row++) {
     for (let col = 0; col < next[row].length; col++) {
-      if (next[row][col] === null) {
+      if (next[row][col] !== null) continue;
+
+      if (rng() < avoidMatchChance) {
+        const forbidden = forbiddenTypesAt(next, row, col);
+        const options = TILE_TYPES.filter((type) => !forbidden.has(type));
+        next[row][col] = options[Math.floor(rng() * options.length)];
+      } else {
         next[row][col] = randomTileType(rng);
       }
     }
@@ -202,16 +246,7 @@ export function generateBoard(width: number, height: number, rng: Rng = Math.ran
   const grid = createEmptyGrid(width, height);
   for (let row = 0; row < height; row++) {
     for (let col = 0; col < width; col++) {
-      const forbidden = new Set<TileType>();
-
-      const left1 = col >= 1 ? grid[row][col - 1] : null;
-      const left2 = col >= 2 ? grid[row][col - 2] : null;
-      if (left1 !== null && left1 === left2) forbidden.add(left1);
-
-      const up1 = row >= 1 ? grid[row - 1][col] : null;
-      const up2 = row >= 2 ? grid[row - 2][col] : null;
-      if (up1 !== null && up1 === up2) forbidden.add(up1);
-
+      const forbidden = forbiddenTypesAt(grid, row, col);
       const options = TILE_TYPES.filter((type) => !forbidden.has(type));
       grid[row][col] = options[Math.floor(rng() * options.length)];
     }

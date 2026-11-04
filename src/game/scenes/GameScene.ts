@@ -10,6 +10,7 @@ import {
   shuffleBoard,
   swapTiles,
 } from '../logic/board';
+import { DEFAULT_DIFFICULTY } from '../logic/difficulty';
 import { applyMove, createSession, type SessionState } from '../logic/level';
 import { getLevelById } from '../logic/levels';
 import { markLevelCompleted } from '../logic/progress';
@@ -315,7 +316,7 @@ export class GameScene extends Phaser.Scene {
     await this.animateGravity();
 
     const beforeRefill = this.grid;
-    this.grid = refill(this.grid);
+    this.grid = refill(this.grid, Math.random, DEFAULT_DIFFICULTY.refillAvoidMatchChance);
     await this.animateRefill(beforeRefill, this.grid);
   }
 

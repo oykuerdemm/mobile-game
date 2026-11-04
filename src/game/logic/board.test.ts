@@ -189,6 +189,37 @@ describe('refill', () => {
     expect(TILE_TYPES).toContain(filled[0][0]);
     expect(TILE_TYPES).toContain(filled[1][1]);
   });
+
+  it('defaults to avoidMatchChance 0: can still place a tile that completes a match', () => {
+    const grid: Grid = [[TileType.Red, TileType.Red, null]];
+    let sawRed = false;
+    for (let seed = 0; seed < 50 && !sawRed; seed++) {
+      if (refill(grid, mulberry32(seed))[0][2] === TileType.Red) sawRed = true;
+    }
+    expect(sawRed).toBe(true);
+  });
+
+  it('with avoidMatchChance 1, excludes a type that would complete a match', () => {
+    const grid: Grid = [[TileType.Red, TileType.Red, null]];
+    for (let seed = 0; seed < 50; seed++) {
+      expect(refill(grid, mulberry32(seed), 1)[0][2]).not.toBe(TileType.Red);
+    }
+  });
+
+  it('with avoidMatchChance 1, never completes a match using already-placed neighbors', () => {
+    for (let seed = 0; seed < 100; seed++) {
+      // Simulate a post-gravity board: a match-free base with the top two rows
+      // of every column emptied out, as if gravity had just cleared 16 tiles.
+      const base = generateBoard(8, 8, mulberry32(seed));
+      const postGravity = base.map((row) => row.slice());
+      for (let col = 0; col < 8; col++) {
+        postGravity[0][col] = null;
+        postGravity[1][col] = null;
+      }
+      const filled = refill(postGravity, mulberry32(seed + 10000), 1);
+      expect(findMatches(filled).size).toBe(0);
+    }
+  });
 });
 
 describe('hasAvailableMove', () => {
