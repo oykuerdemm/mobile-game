@@ -16,10 +16,18 @@ import { tweenPromise } from '../render/tween';
 
 const CELL_SIZE = 80;
 const SPRITE_SCALE = (CELL_SIZE * 0.82) / TILE_SIZE;
-const SWAP_DURATION = 150;
-const CLEAR_DURATION = 150;
-const FALL_DURATION = 200;
+const SWAP_DURATION = 140;
+const REVERT_DURATION = 180;
+const CLEAR_DURATION = 160;
+const FALL_DURATION_BASE = 90;
+const FALL_DURATION_PER_ROW = 45;
+const FALL_DURATION_MIN = 140;
+const FALL_DURATION_MAX = 420;
 const DRAG_THRESHOLD = CELL_SIZE * 0.3;
+
+function fallDuration(rowsFallen: number): number {
+  return Phaser.Math.Clamp(FALL_DURATION_BASE + rowsFallen * FALL_DURATION_PER_ROW, FALL_DURATION_MIN, FALL_DURATION_MAX);
+}
 
 type Sprite = Phaser.GameObjects.Image;
 
@@ -118,13 +126,13 @@ export class GameScene extends Phaser.Scene {
 
     this.grid = swapTiles(this.grid, a, b);
     this.swapSpritesInPlace(a, b);
-    await this.tweenSwap(a, b);
+    await this.tweenSwap(a, b, SWAP_DURATION, 'Quad.easeInOut');
 
     const matched = findMatches(this.grid);
     if (matched.size === 0) {
       this.grid = swapTiles(this.grid, a, b);
       this.swapSpritesInPlace(a, b);
-      await this.tweenSwap(a, b);
+      await this.tweenSwap(a, b, REVERT_DURATION, 'Back.easeOut');
     } else {
       await this.resolveCascade();
     }
@@ -182,15 +190,15 @@ export class GameScene extends Phaser.Scene {
     spriteB?.setData('row', a.row).setData('col', a.col);
   }
 
-  private async tweenSwap(a: Position, b: Position): Promise<void> {
+  private async tweenSwap(a: Position, b: Position, duration: number, ease: string): Promise<void> {
     const spriteAtA = this.sprites[a.row][a.col];
     const spriteAtB = this.sprites[b.row][b.col];
     const worldA = this.cellToWorld(a.row, a.col);
     const worldB = this.cellToWorld(b.row, b.col);
 
     await Promise.all([
-      tweenPromise(this, { targets: spriteAtA, x: worldA.x, y: worldA.y, duration: SWAP_DURATION, ease: 'Quad.easeInOut' }),
-      tweenPromise(this, { targets: spriteAtB, x: worldB.x, y: worldB.y, duration: SWAP_DURATION, ease: 'Quad.easeInOut' }),
+      tweenPromise(this, { targets: spriteAtA, x: worldA.x, y: worldA.y, duration, ease }),
+      tweenPromise(this, { targets: spriteAtB, x: worldB.x, y: worldB.y, duration, ease }),
     ]);
   }
 
@@ -213,7 +221,7 @@ export class GameScene extends Phaser.Scene {
       const [row, col] = key.split(',').map(Number);
       const sprite = this.sprites[row][col];
       if (!sprite) continue;
-      tweens.push(tweenPromise(this, { targets: sprite, scale: 0, alpha: 0, duration: CLEAR_DURATION, ease: 'Quad.easeIn' }));
+      tweens.push(tweenPromise(this, { targets: sprite, scale: 0, alpha: 0, duration: CLEAR_DURATION, ease: 'Back.easeIn' }));
     }
     await Promise.all(tweens);
     for (const key of matched) {
@@ -240,7 +248,8 @@ export class GameScene extends Phaser.Scene {
         sprite.setData('row', newRow).setData('col', col);
         if (newRow !== row) {
           const { y } = this.cellToWorld(newRow, col);
-          tweens.push(tweenPromise(this, { targets: sprite, y, duration: FALL_DURATION, ease: 'Quad.easeIn' }));
+          const duration = fallDuration(newRow - row);
+          tweens.push(tweenPromise(this, { targets: sprite, y, duration, ease: 'Quad.easeIn' }));
         }
       });
     }
@@ -266,7 +275,8 @@ export class GameScene extends Phaser.Scene {
         const sprite = this.createTileSprite(row, col, type);
         sprite.setPosition(target.x, spawnY);
         this.sprites[row][col] = sprite;
-        tweens.push(tweenPromise(this, { targets: sprite, y: target.y, duration: FALL_DURATION, ease: 'Quad.easeIn' }));
+        const duration = fallDuration((target.y - spawnY) / CELL_SIZE);
+        tweens.push(tweenPromise(this, { targets: sprite, y: target.y, duration, ease: 'Quad.easeIn' }));
       });
     }
 
