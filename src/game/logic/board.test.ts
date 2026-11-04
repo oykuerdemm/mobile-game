@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { areAdjacent, createEmptyGrid, findMatches, generateBoard, swapTiles } from './board';
+import { areAdjacent, createEmptyGrid, findMatches, generateBoard, isValidSwap, swapTiles } from './board';
 import { mulberry32 } from './rng';
 import { TILE_TYPES, TileType, type Grid } from './types';
 
@@ -109,6 +109,29 @@ describe('swapTiles', () => {
     const original = grid.map((row) => row.slice());
     swapTiles(grid, { row: 0, col: 0 }, { row: 0, col: 1 });
     expect(grid).toEqual(original);
+  });
+});
+
+describe('isValidSwap', () => {
+  it('is true when the swap completes a 3+ run', () => {
+    const grid: Grid = [
+      [TileType.Red, TileType.Red, TileType.Blue],
+      [TileType.Green, TileType.Yellow, TileType.Red],
+    ];
+    expect(isValidSwap(grid, { row: 0, col: 2 }, { row: 1, col: 2 })).toBe(true);
+  });
+
+  it('is false when the swap creates no match', () => {
+    const grid: Grid = [
+      [TileType.Red, TileType.Blue, TileType.Green],
+      [TileType.Blue, TileType.Green, TileType.Red],
+    ];
+    expect(isValidSwap(grid, { row: 0, col: 0 }, { row: 0, col: 1 })).toBe(false);
+  });
+
+  it('is false for non-adjacent positions even if it would create a match', () => {
+    const grid: Grid = [[TileType.Red, TileType.Red, TileType.Blue, TileType.Red]];
+    expect(isValidSwap(grid, { row: 0, col: 0 }, { row: 0, col: 3 })).toBe(false);
   });
 });
 

@@ -27,6 +27,12 @@ export function swapTiles(grid: Grid, a: Position, b: Position): Grid {
   return next;
 }
 
+/** True if swapping the two (adjacent) positions would create a 3+ match. */
+export function isValidSwap(grid: Grid, a: Position, b: Position): boolean {
+  if (!areAdjacent(a, b)) return false;
+  return findMatches(swapTiles(grid, a, b)).size > 0;
+}
+
 function cellKey(row: number, col: number): string {
   return `${row},${col}`;
 }

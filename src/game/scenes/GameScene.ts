@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { areAdjacent, generateBoard, swapTiles } from '../logic/board';
+import { areAdjacent, findMatches, generateBoard, swapTiles } from '../logic/board';
 import { BOARD_HEIGHT, BOARD_WIDTH, type Grid, type Position } from '../logic/types';
 import { createTileTextures, textureKeyForTile, TILE_SIZE } from '../render/textures';
 import { tweenPromise } from '../render/tween';
@@ -100,6 +100,12 @@ export class GameScene extends Phaser.Scene {
     this.grid = swapTiles(this.grid, a, b);
     this.swapSpritesInPlace(a, b);
     await this.tweenSwap(a, b);
+
+    if (findMatches(this.grid).size === 0) {
+      this.grid = swapTiles(this.grid, a, b);
+      this.swapSpritesInPlace(a, b);
+      await this.tweenSwap(a, b);
+    }
 
     this.busy = false;
   }
