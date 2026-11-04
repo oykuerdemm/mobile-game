@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { areAdjacent, createEmptyGrid, findMatches, generateBoard, isValidSwap, swapTiles } from './board';
+import {
+  applyGravity,
+  areAdjacent,
+  clearMatches,
+  createEmptyGrid,
+  findMatches,
+  generateBoard,
+  isValidSwap,
+  refill,
+  swapTiles,
+} from './board';
 import { mulberry32 } from './rng';
 import { TILE_TYPES, TileType, type Grid } from './types';
 
@@ -132,6 +142,49 @@ describe('isValidSwap', () => {
   it('is false for non-adjacent positions even if it would create a match', () => {
     const grid: Grid = [[TileType.Red, TileType.Red, TileType.Blue, TileType.Red]];
     expect(isValidSwap(grid, { row: 0, col: 0 }, { row: 0, col: 3 })).toBe(false);
+  });
+});
+
+describe('clearMatches', () => {
+  it('nulls out only the matched cells', () => {
+    const grid: Grid = [[TileType.Red, TileType.Red, TileType.Red, TileType.Blue]];
+    const cleared = clearMatches(grid, new Set(['0,0', '0,1', '0,2']));
+    expect(cleared).toEqual([[null, null, null, TileType.Blue]]);
+  });
+});
+
+describe('applyGravity', () => {
+  it('drops surviving tiles to the bottom of each column, preserving order', () => {
+    const grid: Grid = [
+      [TileType.Red, null],
+      [null, TileType.Blue],
+      [TileType.Green, null],
+    ];
+    const result = applyGravity(grid);
+    expect(result).toEqual([
+      [null, null],
+      [TileType.Red, null],
+      [TileType.Green, TileType.Blue],
+    ]);
+  });
+
+  it('leaves a full column untouched', () => {
+    const grid: Grid = [[TileType.Red], [TileType.Blue], [TileType.Green]];
+    expect(applyGravity(grid)).toEqual(grid);
+  });
+});
+
+describe('refill', () => {
+  it('fills every null cell and leaves existing tiles untouched', () => {
+    const grid: Grid = [
+      [null, TileType.Blue],
+      [TileType.Green, null],
+    ];
+    const filled = refill(grid, mulberry32(7));
+    expect(filled[0][1]).toBe(TileType.Blue);
+    expect(filled[1][0]).toBe(TileType.Green);
+    expect(TILE_TYPES).toContain(filled[0][0]);
+    expect(TILE_TYPES).toContain(filled[1][1]);
   });
 });
 

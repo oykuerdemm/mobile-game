@@ -33,6 +33,49 @@ export function isValidSwap(grid: Grid, a: Position, b: Position): boolean {
   return findMatches(swapTiles(grid, a, b)).size > 0;
 }
 
+/** Returns a new grid with every matched cell emptied (set to null). */
+export function clearMatches(grid: Grid, matched: Set<string>): Grid {
+  const next = cloneGrid(grid);
+  for (const key of matched) {
+    const [row, col] = key.split(',').map(Number);
+    next[row][col] = null;
+  }
+  return next;
+}
+
+/** Drops every non-null tile in each column down to fill the gaps left by clearing, nulls float to the top. */
+export function applyGravity(grid: Grid): Grid {
+  const height = grid.length;
+  const width = grid[0].length;
+  const next = createEmptyGrid(width, height);
+
+  for (let col = 0; col < width; col++) {
+    const stack: TileType[] = [];
+    for (let row = 0; row < height; row++) {
+      const value = grid[row][col];
+      if (value !== null) stack.push(value);
+    }
+    const offset = height - stack.length;
+    for (let i = 0; i < stack.length; i++) {
+      next[offset + i][col] = stack[i];
+    }
+  }
+  return next;
+}
+
+/** Fills every null cell with a new random tile type. */
+export function refill(grid: Grid, rng: Rng = Math.random): Grid {
+  const next = cloneGrid(grid);
+  for (let row = 0; row < next.length; row++) {
+    for (let col = 0; col < next[row].length; col++) {
+      if (next[row][col] === null) {
+        next[row][col] = randomTileType(rng);
+      }
+    }
+  }
+  return next;
+}
+
 function cellKey(row: number, col: number): string {
   return `${row},${col}`;
 }

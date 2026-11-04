@@ -1,17 +1,21 @@
 import Phaser from 'phaser';
-import { areAdjacent, findMatches, generateBoard, swapTiles } from '../logic/board';
-import { BOARD_HEIGHT, BOARD_WIDTH, type Grid, type Position } from '../logic/types';
+import { applyGravity, areAdjacent, clearMatches, findMatches, generateBoard, refill, swapTiles } from '../logic/board';
+import { BOARD_HEIGHT, BOARD_WIDTH, type Grid, type Position, type TileType } from '../logic/types';
 import { createTileTextures, textureKeyForTile, TILE_SIZE } from '../render/textures';
 import { tweenPromise } from '../render/tween';
 
 const CELL_SIZE = 80;
 const SPRITE_SCALE = (CELL_SIZE * 0.82) / TILE_SIZE;
 const SWAP_DURATION = 150;
+const CLEAR_DURATION = 150;
+const FALL_DURATION = 200;
 const DRAG_THRESHOLD = CELL_SIZE * 0.3;
+
+type Sprite = Phaser.GameObjects.Image;
 
 export class GameScene extends Phaser.Scene {
   private grid!: Grid;
-  private sprites!: Phaser.GameObjects.Image[][];
+  private sprites!: (Sprite | null)[][];
   private boardOffsetX = 0;
   private boardOffsetY = 0;
   private dragOrigin: Position | null = null;
@@ -56,12 +60,14 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  private createTileSprite(row: number, col: number, type: NonNullable<Grid[number][number]>): Phaser.GameObjects.Image {
+  private createTileSprite(row: number, col: number, type: TileType): Sprite {
     const { x, y } = this.cellToWorld(row, col);
     const sprite = this.add.image(x, y, textureKeyForTile(type)).setScale(SPRITE_SCALE).setInteractive();
     sprite.setData('row', row);
     sprite.setData('col', col);
-    sprite.on('pointerdown', () => this.handlePointerDown({ row, col }));
+    sprite.on('pointerdown', () => {
+      this.handlePointerDown({ row: sprite.getData('row'), col: sprite.getData('col') });
+    });
     return sprite;
   }
 
@@ -101,10 +107,13 @@ export class GameScene extends Phaser.Scene {
     this.swapSpritesInPlace(a, b);
     await this.tweenSwap(a, b);
 
-    if (findMatches(this.grid).size === 0) {
+    const matched = findMatches(this.grid);
+    if (matched.size === 0) {
       this.grid = swapTiles(this.grid, a, b);
       this.swapSpritesInPlace(a, b);
       await this.tweenSwap(a, b);
+    } else {
+      await this.resolveMatches(matched);
     }
 
     this.busy = false;
@@ -115,8 +124,8 @@ export class GameScene extends Phaser.Scene {
     const spriteB = this.sprites[b.row][b.col];
     this.sprites[a.row][a.col] = spriteB;
     this.sprites[b.row][b.col] = spriteA;
-    spriteA.setData('row', b.row).setData('col', b.col);
-    spriteB.setData('row', a.row).setData('col', a.col);
+    spriteA?.setData('row', b.row).setData('col', b.col);
+    spriteB?.setData('row', a.row).setData('col', a.col);
   }
 
   private async tweenSwap(a: Position, b: Position): Promise<void> {
@@ -129,5 +138,84 @@ export class GameScene extends Phaser.Scene {
       tweenPromise(this, { targets: spriteAtA, x: worldA.x, y: worldA.y, duration: SWAP_DURATION, ease: 'Quad.easeInOut' }),
       tweenPromise(this, { targets: spriteAtB, x: worldB.x, y: worldB.y, duration: SWAP_DURATION, ease: 'Quad.easeInOut' }),
     ]);
+  }
+
+  /** Clears the given matches, applies gravity, and refills empty cells from the top — one pass, no cascade. */
+  private async resolveMatches(matched: Set<string>): Promise<void> {
+    this.grid = clearMatches(this.grid, matched);
+    await this.animateClear(matched);
+
+    this.grid = applyGravity(this.grid);
+    await this.animateGravity();
+
+    const beforeRefill = this.grid;
+    this.grid = refill(this.grid);
+    await this.animateRefill(beforeRefill, this.grid);
+  }
+
+  private async animateClear(matched: Set<string>): Promise<void> {
+    const tweens: Promise<void>[] = [];
+    for (const key of matched) {
+      const [row, col] = key.split(',').map(Number);
+      const sprite = this.sprites[row][col];
+      if (!sprite) continue;
+      tweens.push(tweenPromise(this, { targets: sprite, scale: 0, alpha: 0, duration: CLEAR_DURATION, ease: 'Quad.easeIn' }));
+    }
+    await Promise.all(tweens);
+    for (const key of matched) {
+      const [row, col] = key.split(',').map(Number);
+      this.sprites[row][col]?.destroy();
+      this.sprites[row][col] = null;
+    }
+  }
+
+  private async animateGravity(): Promise<void> {
+    const nextSprites: (Sprite | null)[][] = Array.from({ length: BOARD_HEIGHT }, () => Array(BOARD_WIDTH).fill(null));
+    const tweens: Promise<void>[] = [];
+
+    for (let col = 0; col < BOARD_WIDTH; col++) {
+      const survivors: { row: number; sprite: Sprite }[] = [];
+      for (let row = 0; row < BOARD_HEIGHT; row++) {
+        const sprite = this.sprites[row][col];
+        if (sprite) survivors.push({ row, sprite });
+      }
+      const offset = BOARD_HEIGHT - survivors.length;
+      survivors.forEach(({ row, sprite }, i) => {
+        const newRow = offset + i;
+        nextSprites[newRow][col] = sprite;
+        sprite.setData('row', newRow).setData('col', col);
+        if (newRow !== row) {
+          const { y } = this.cellToWorld(newRow, col);
+          tweens.push(tweenPromise(this, { targets: sprite, y, duration: FALL_DURATION, ease: 'Quad.easeIn' }));
+        }
+      });
+    }
+
+    this.sprites = nextSprites;
+    await Promise.all(tweens);
+  }
+
+  private async animateRefill(before: Grid, after: Grid): Promise<void> {
+    const tweens: Promise<void>[] = [];
+
+    for (let col = 0; col < BOARD_WIDTH; col++) {
+      const emptyRows: number[] = [];
+      for (let row = 0; row < BOARD_HEIGHT; row++) {
+        if (before[row][col] === null) emptyRows.push(row);
+      }
+
+      emptyRows.forEach((row, indexFromTop) => {
+        const type = after[row][col];
+        if (type === null) return;
+        const target = this.cellToWorld(row, col);
+        const spawnY = this.boardOffsetY + (indexFromTop - emptyRows.length) * CELL_SIZE + CELL_SIZE / 2;
+        const sprite = this.createTileSprite(row, col, type);
+        sprite.setPosition(target.x, spawnY);
+        this.sprites[row][col] = sprite;
+        tweens.push(tweenPromise(this, { targets: sprite, y: target.y, duration: FALL_DURATION, ease: 'Quad.easeIn' }));
+      });
+    }
+
+    await Promise.all(tweens);
   }
 }
