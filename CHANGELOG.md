@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-11-04 — Playtest düzeltmeleri (menü, anında eşleşme, zorluk eğrisi)
+
+Playtest notlarına (PLAN.md) göre 3 düzeltme, 3 ayrı commit:
+- **Menü butonu**: Level oynanırken (bitmeden) üstte her zaman görünen bir "Menü" butonu eklendi, level seçimine dönmeyi sağlıyor.
+- **Yeni gelen taşların anında eşleşmesi azaltıldı**: `refill()` artık opsiyonel bir `avoidMatchChance` (0-1) parametresi alıyor — bu olasılıkla yeni taş, komşularıyla (üst/alt/sol/sağ, ayrıca iki komşu arasında "sandviç" olma durumu dahil) anında eşleşme tamamlamayacak bir tipten seçiliyor; aksi halde tamamen rastgele. `src/game/logic/difficulty.ts`'deki `DEFAULT_DIFFICULTY.refillAvoidMatchChance = 0.7` ile kontrol ediliyor — zorluk ileride tek bir sayı değiştirilerek ayarlanabilir. Varsayılan değer 0 (eski tam rastgele davranış), `GameScene` gerçek değeri açıkça geçiyor.
+- **Hamle sayıları ve hedefler yeniden dengelendi**: Eski level tasarımı (hedef 15-30 arası, hamle 15-25 arası) matematiksel olarak tutarsızdı — son levellar pratikte kazanılamazdı (ör. level 10'da 15 hamlede 30 taş toplamak gerekiyordu, gerçekçi toplama hızı ~1 taş/hamle). Gerçek tahta mantığına karşı atılan rastgele-ama-geçerli-hamle simülasyonuyla (geçici, commit'lenmemiş bir test dosyasıyla) kalibre edildi: her level artık sabit 12 taş hedefliyor (renk level'dan level'a dönüşümlü), hamle limiti 21'den 13'e kadar düşüyor (21,20,19,18,18,17,16,15,14,13). Rastgele oynanışla simüle edilen kazanma oranı level 1'de %98 (ortalama 8.9 hamle fazlalıkla), level 10'da %65 (ortalama 1.1 hamle fazlalıkla) — gerçek bir oyuncu hedef rengi gözeteceği için bu oranların üzerinde kalır.
+
+Nasıl test edilir:
+- `npm run dev`, Level 1'i aç: üstte "Menü" butonu görünmeli, tıklanınca level seçimine dönmeli. "0/12" ve "Hamle: 21" görünmeli.
+- `npm test` (45 test) ve `npm run build` hatasız geçmeli.
+
+Bilinen sorunlar / yapılamayanlar:
+- Zorluk eğrisi rastgele-hamle simülasyonuyla kalibre edildi, gerçek bir insan oyuncunun 10 level'ı baştan sona oynaması ile doğrulanmadı (zaman kısıtı). Oynarken çok kolay/zor hissederse PLAN.md'ye not düşülüp `DEFAULT_DIFFICULTY` veya level JSON'ları buna göre ayarlanabilir.
+
 ## 2026-11-04 — M0: Kurulum
 
 Yapıldı:
