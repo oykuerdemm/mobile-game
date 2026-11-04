@@ -45,10 +45,10 @@ Sırayla yapılır. Her oturum bir sonraki işaretlenmemiş maddeyi alır.
 - [x] Basit level seçim ekranı ve ilerlemenin kaydedilmesi (localStorage)
 
 ### M3 — Özel taşlar
-- [ ] 4'lü eşleşme: satır veya sütunu temizleyen taş
-- [ ] L/T eşleşmesi: çevresini patlatan taş
-- [ ] 5'li eşleşme: seçilen renkteki tüm taşları temizleyen taş
-- [ ] Özel taşların birbiriyle kombinasyonları
+- [x] 4'lü eşleşme: satır veya sütunu temizleyen taş
+- [x] L/T eşleşmesi: çevresini patlatan taş
+- [x] 5'li eşleşme: seçilen renkteki tüm taşları temizleyen taş
+- [x] Özel taşların birbiriyle kombinasyonları
 
 ### M4 — Engeller
 - [ ] Yanında eşleşme yapılınca kırılan kutu (1 ve 2 katmanlı)

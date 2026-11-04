@@ -1,5 +1,25 @@
 # Changelog
 
+## 2026-11-04 — M3: Özel taşlar
+
+Yapıldı (backlog sırasına göre 4 madde, 4 ayrı commit):
+- **4'lü eşleşme → satır/sütun temizleyici**: `src/game/logic/specials.ts`'de `analyzeMatchShapes()` bir hamlenin oluşturduğu koşuları (run) inceliyor; düz 4'lü bir koşu, swap pozisyonunda (cascade'lerde koşunun ortasında) bir `RowClear`/`ColClear` özel taşı doğuruyor. Bu pozisyon normal silinmeden hariç tutulup "yükseltiliyor".
+- **L/T eşleşmesi → bomba**: Yatay ve dikey bir koşunun (ikisi de 3+) tek bir hücrede kesiştiği durumlar tespit edilip o kesişim noktasında bir `Bomb` doğuyor (3x3 alan temizler, düz 4'lü kuraldan önceliklidir).
+- **5'li eşleşme → renk temizleyici**: 5+ uzunluğundaki bir koşu, kendi rengindeki (ve sadece L/T'ye dahil olmayan) durumda bir `ColorClear` doğuruyor; aktive olunca tahtadaki o renkteki TÜM taşları temizliyor.
+- **Özel taşların kombinasyonu**: İki özel taşı doğrudan birbirine sürüklemek, normal bir eşleşme oluşturmasa bile her zaman geçerli bir hamle sayılıyor; ikisi birden aktive olup etkilerinin birleşimini (ve varsa zincirleme başka özel taşları) tetikliyor.
+
+Mimari: özel taşlar, renk tahtasının (`Grid`) ÜSTÜNE binen paralel bir `SpecialBoard` olarak tutuluyor — böylece M1/M2'de yazılan eşleşme/yerçekimi/doldurma mantığı hiç değişmedi. `expandWithSpecials()` bir eşleşen/kombine edilen hücre kümesinden başlayıp BFS ile zincirleme aktivasyonu uyguluyor (bir özel taşın patlaması başka birini açığa çıkarıp onu da patlatabilir). Özel taşlar için prosedürel görseller eklendi (yuvarlatılmış çubuk, halkalı daire, 8 köşeli parıltı — hepsi taşın kendi renginde, beyaz kontur ile). Tahta karıştırılınca (hamle kalmadığında) tüm özel taşlar sıfırlanıyor.
+
+Oyun mantığı tamamen saf TypeScript (`src/game/logic/specials.ts`), Vitest ile 19 yeni test.
+
+Nasıl test edilir:
+- `npm run dev`, bir level oyna. 4'lü bir eşleşme oluşturduğunda beyaz konturlu bir "çubuk" taş belirmeli; o taş sonradan başka bir eşleşmeye dahil olduğunda tüm satırı/sütunu temizlemeli. L/T şeklinde eşleşme halkalı bir "bomba" taşı, 5'li eşleşme parıltılı bir taş doğurmalı. İki özel taşı yan yana sürükleyip birbirine değiştirmek büyük bir temizlemeye yol açmalı.
+- `npm test` (64 test) ve `npm run build` hatasız geçmeli.
+
+Bilinen sorunlar / yapılamayanlar:
+- Her 4 özellik de tarayıcıda gerçek oynanışla VE (nadir senaryoları güvenilir tetiklemek için) geçici bir debug hook üzerinden manuel olarak doğrulandı; debug hook commit'lenmeden önce kaldırıldı.
+- Özel taş kombinasyon kuralları basitleştirildi: her kombinasyon, iki özel taşın kendi etkilerinin birleşimi (union) olarak uygulanıyor — klasik match-3 oyunlarındaki her çift için özel/bambaşka bir efekt (ör. iki renk-temizleyici → tüm tahtayı temizle) yok, prototip kapsamında yeterli görüldü.
+
 ## 2026-11-04 — Playtest düzeltmeleri (menü, anında eşleşme, zorluk eğrisi)
 
 Playtest notlarına (PLAN.md) göre 3 düzeltme, 3 ayrı commit:
