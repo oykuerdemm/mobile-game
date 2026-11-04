@@ -163,10 +163,19 @@ export interface MatchShapeAnalysis {
   keepPositions: Set<string>;
 }
 
+function sharedCell(a: Run, b: Run): Position | undefined {
+  return a.cells.find((ac) => b.cells.some((bc) => bc.row === ac.row && bc.col === ac.col));
+}
+
 /**
  * Looks at the runs that make up `matched` and decides whether any of them
- * form a shape that spawns a special tile: currently only a plain 4-in-a-row
- * (line clear). L/T and 5+ shapes are detected elsewhere as those land.
+ * form a shape that spawns a special tile:
+ * - an L/T (a horizontal and a vertical run of 3+ sharing one cell) spawns a
+ *   Bomb at the intersection, taking priority over the plain-line case below;
+ * - a plain 4-in-a-row spawns a RowClear/ColClear at whichever swapped
+ *   position is part of the run (falling back to the run's center for
+ *   cascade-born matches, when `swapPositions` is null).
+ * 5+ runs are handled elsewhere as those land.
  */
 export function analyzeMatchShapes(
   grid: Grid,
@@ -177,9 +186,26 @@ export function analyzeMatchShapes(
 
   const spawns: SpecialSpawn[] = [];
   const keepPositions = new Set<string>();
+  const consumed = new Set<Run>();
+
+  const horizontals = runs.filter((r) => r.orientation === 'horizontal' && r.cells.length >= 3);
+  const verticals = runs.filter((r) => r.orientation === 'vertical' && r.cells.length >= 3);
+
+  for (const h of horizontals) {
+    for (const v of verticals) {
+      if (consumed.has(h) || consumed.has(v)) continue;
+      const intersection = sharedCell(h, v);
+      if (!intersection) continue;
+
+      spawns.push({ position: intersection, tile: { kind: SpecialKind.Bomb, color: h.color } });
+      keepPositions.add(cellKey(intersection.row, intersection.col));
+      consumed.add(h);
+      consumed.add(v);
+    }
+  }
 
   for (const run of runs) {
-    if (run.cells.length !== 4) continue;
+    if (consumed.has(run) || run.cells.length !== 4) continue;
 
     const position = pickSpawnPosition(run.cells, swapPositions);
     const kind = run.orientation === 'horizontal' ? SpecialKind.RowClear : SpecialKind.ColClear;

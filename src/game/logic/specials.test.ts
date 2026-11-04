@@ -193,4 +193,34 @@ describe('analyzeMatchShapes', () => {
     ]);
     expect(spawns[0].position).toEqual({ row: 0, col: 2 });
   });
+
+  it('spawns a Bomb at the intersection of an L/T shaped match', () => {
+    // Horizontal run row1 (cols 0-2) crosses vertical run col1 (rows 0-2) at (1,1).
+    const R = TileType.Red;
+    const B = TileType.Blue;
+    const grid: Grid = [
+      [B, R, B],
+      [R, R, R],
+      [B, R, B],
+    ];
+    const matched = new Set(['1,0', '1,1', '1,2', '0,1', '2,1']);
+    const { spawns, keepPositions } = analyzeMatchShapes(grid, matched, null);
+    expect(spawns).toEqual([{ position: { row: 1, col: 1 }, tile: { kind: SpecialKind.Bomb, color: TileType.Red } }]);
+    expect(keepPositions).toEqual(new Set(['1,1']));
+  });
+
+  it('an L/T intersection takes priority over treating either arm as a plain 4-match', () => {
+    // Horizontal run row1 (cols 0-3, length 4) crosses vertical run col1 (rows 0-2) at (1,1).
+    const R = TileType.Red;
+    const B = TileType.Blue;
+    const grid: Grid = [
+      [B, R, B, B],
+      [R, R, R, R],
+      [B, R, B, B],
+    ];
+    const matched = new Set(['1,0', '1,1', '1,2', '1,3', '0,1', '2,1']);
+    const { spawns } = analyzeMatchShapes(grid, matched, null);
+    expect(spawns).toHaveLength(1);
+    expect(spawns[0].tile.kind).toBe(SpecialKind.Bomb);
+  });
 });

@@ -66,6 +66,13 @@ export function createSpecialTileTextures(scene: Phaser.Scene): void {
     graphics.fillRoundedRect(center - thickness / 2, center - length / 2, thickness, length, thickness / 2);
     graphics.strokeRoundedRect(center - thickness / 2, center - length / 2, thickness, length, thickness / 2);
     graphics.generateTexture(specialTextureKey(SpecialKind.ColClear, color), size, size);
+
+    graphics.clear();
+    graphics.fillStyle(TILE_COLORS[color], 1);
+    graphics.lineStyle(3, 0xffffff, 1);
+    graphics.fillCircle(center, center, size * 0.44);
+    graphics.strokeCircle(center, center, size * 0.3);
+    graphics.generateTexture(specialTextureKey(SpecialKind.Bomb, color), size, size);
   }
   graphics.destroy();
 }
