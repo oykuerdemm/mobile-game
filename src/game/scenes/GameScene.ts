@@ -26,6 +26,7 @@ const FALL_DURATION_MIN = 112;
 const FALL_DURATION_MAX = 336;
 const SHUFFLE_FADE_DURATION = 160;
 const DRAG_THRESHOLD = CELL_SIZE * 0.3;
+const HUD_HEIGHT = 200;
 
 // Temporary until M2's JSON level loading replaces this with real level data.
 const DEMO_LEVEL: LevelConfig = { id: 1, moveLimit: 20, goal: { type: TileType.Red, count: 20 } };
@@ -45,6 +46,8 @@ export class GameScene extends Phaser.Scene {
   private dragTriggered = false;
   private busy = false;
   private session!: SessionState;
+  private goalText!: Phaser.GameObjects.Text;
+  private movesText!: Phaser.GameObjects.Text;
 
   constructor() {
     super('GameScene');
@@ -56,8 +59,11 @@ export class GameScene extends Phaser.Scene {
 
     const boardPixelWidth = CELL_SIZE * BOARD_WIDTH;
     const boardPixelHeight = CELL_SIZE * BOARD_HEIGHT;
+    const availableHeight = this.scale.height - HUD_HEIGHT;
     this.boardOffsetX = (this.scale.width - boardPixelWidth) / 2;
-    this.boardOffsetY = (this.scale.height - boardPixelHeight) / 2;
+    this.boardOffsetY = HUD_HEIGHT + (availableHeight - boardPixelHeight) / 2;
+
+    this.createHud();
 
     this.grid = generateBoard(BOARD_WIDTH, BOARD_HEIGHT);
     if (!hasAvailableMove(this.grid)) {
@@ -68,6 +74,23 @@ export class GameScene extends Phaser.Scene {
 
     this.input.on('pointermove', this.handlePointerMove, this);
     this.input.on('pointerup', this.handlePointerUp, this);
+  }
+
+  private createHud(): void {
+    const hudY = HUD_HEIGHT / 2;
+    this.add.image(60, hudY, textureKeyForTile(this.session.level.goal.type)).setScale(SPRITE_SCALE);
+    this.goalText = this.add
+      .text(100, hudY, '', { fontFamily: 'sans-serif', fontSize: '32px', color: '#ffffff' })
+      .setOrigin(0, 0.5);
+    this.movesText = this.add
+      .text(this.scale.width - 30, hudY, '', { fontFamily: 'sans-serif', fontSize: '32px', color: '#ffffff' })
+      .setOrigin(1, 0.5);
+    this.updateHud();
+  }
+
+  private updateHud(): void {
+    this.goalText.setText(`${this.session.collected}/${this.session.level.goal.count}`);
+    this.movesText.setText(`Hamle: ${this.session.movesRemaining}`);
   }
 
   private cellToWorld(row: number, col: number): { x: number; y: number } {
@@ -143,6 +166,7 @@ export class GameScene extends Phaser.Scene {
     } else {
       const cleared = await this.resolveCascade();
       this.session = applyMove(this.session, cleared);
+      this.updateHud();
     }
 
     if (this.session.status === 'playing' && !hasAvailableMove(this.grid)) {
