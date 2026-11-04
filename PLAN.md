@@ -38,11 +38,11 @@ Sırayla yapılır. Her oturum bir sonraki işaretlenmemiş maddeyi alır.
 - [x] Temel animasyonlar (swap, silinme, düşme)
 
 ### M2 — Level yapısı
-- [ ] Hamle limiti ve hedef (ör. 20 kırmızı taş topla)
-- [ ] Üst barda hedef ve kalan hamle göstergesi
-- [ ] Kazanma / kaybetme ekranları, tekrar dene
-- [ ] JSON'dan level yükleme, 10 level
-- [ ] Basit level seçim ekranı ve ilerlemenin kaydedilmesi (localStorage)
+- [x] Hamle limiti ve hedef (ör. 20 kırmızı taş topla)
+- [x] Üst barda hedef ve kalan hamle göstergesi
+- [x] Kazanma / kaybetme ekranları, tekrar dene
+- [x] JSON'dan level yükleme, 10 level
+- [x] Basit level seçim ekranı ve ilerlemenin kaydedilmesi (localStorage)
 
 ### M3 — Özel taşlar
 - [ ] 4'lü eşleşme: satır veya sütunu temizleyen taş
@@ -72,6 +72,8 @@ Sırayla yapılır. Her oturum bir sonraki işaretlenmemiş maddeyi alır.
 
 ## Öneriler
 Oturumlar sırasında akla gelen ama backlog'da olmayan fikirler buraya yazılır. Onaylanmadan uygulanmaz.
+
+- M2 sırasında fark edildi: level oynanırken (kazanma/kaybetme ekranı gelmeden) level seçimine dönecek bir "geri" butonu yok. Şu an oyuncu sadece kazanıp/kaybedip ekrandaki "Level Seçimi" butonuyla çıkabiliyor. Küçük bir UX eklentisi olabilir.
 
 ## Playtest notları
 Oynadıktan sonra notlarını buraya yaz. Bir sonraki oturum bunları okur ve gerekirse backlog'a ekler.

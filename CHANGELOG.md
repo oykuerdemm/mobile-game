@@ -44,3 +44,26 @@ Bilinen sorunlar / yapılamayanlar:
 - "Hamle kalmadı" karıştırma akışı birim testleriyle doğrulandı ama 8x8 tahtada organik oyunla bu durumu elle tetiklemek pratik değildi; uçtan uca görsel doğrulama yapılmadı.
 - Gerçek fiziksel telefonda dokunma testi hâlâ yapılmadı (Claude in Chrome ile masaüstü tarayıcı simülasyonu kullanıldı).
 - Henüz skor, hamle limiti, hedef yok — bunlar M2'de geliyor.
+
+## 2026-11-04 — Animasyon hızı ayarı
+
+Playtest geri bildirimi: swap/silme/düşme/karıştırma animasyonları yavaş hissettiriyordu. `GameScene` içindeki tüm süre sabitleri ~%20 kısaltıldı (örn. swap 140ms→112ms, düşme taban süresi 90ms→72ms). Davranış aynı, sadece daha hızlı. `npm test` ve `npm run build` ile doğrulandı, tarayıcıda bir swap+eşleşme denendi.
+
+## 2026-11-04 — M2: Level yapısı
+
+Yapıldı (backlog sırasına göre 5 madde, 5 ayrı commit):
+- **Hamle limiti + hedef**: `src/game/logic/level.ts`'de `LevelConfig`/`SessionState`/`createSession`/`applyMove` — saf TypeScript, Vitest ile test edildi. Bir level'ın hamle limiti ve tek renkli bir toplama hedefi (`{type, count}`) var; her geçerli swap bir hamle harcıyor ve temizlenen hedef-renkli taşları sayıyor.
+- **Üst HUD**: Canvas'ın üstünde 200px'lik bir bant: solda hedef taşının ikonu + "toplanan/hedef", sağda "Hamle: N". Tahta bu bandın altında ortalanıyor.
+- **Kazanma/kaybetme ekranı**: Session durumu `playing` olmaktan çıkınca yarı saydam bir overlay ve "Kazandın!"/"Kaybettin" yazısıyla "Tekrar Dene" butonu çıkıyor (sahneyi aynı level ile yeniden başlatıyor).
+- **JSON'dan 10 level**: `src/levels/level-01.json` .. `level-10.json`, her biri `{id, moveLimit, goal}`. `src/game/logic/levels.ts` bunları yükleyip `LevelConfig[]`'e çeviriyor (Vitest ile test edildi). `GameScene` artık sahne verisinden gelen `levelId`'ye göre gerçek level'ı oynuyor.
+- **Level seçim ekranı + ilerleme kaydı**: Yeni `LevelSelectScene` (artık başlangıç sahnesi) 10 level'ı 5x2 bir ızgarada listeliyor; oyuncunun ilerisindeki level'lar kilitli/soluk görünüyor. `src/game/logic/progress.ts`'deki `loadUnlockedLevel`/`markLevelCompleted` localStorage'a yazıp okuyor (test edilebilir olsun diye enjekte edilebilir bir storage arayüzü üzerinden, Vitest ile test edildi). Kazanma ekranına "Sonraki Level" ve "Level Seçimi" butonları eklendi; kazanınca bir sonraki level otomatik açılıyor.
+
+Nasıl test edilir:
+- `npm run dev`, `http://localhost:5173/mobile-game/` adresini aç. Başlangıçta sadece Level 1 açık olmalı. Level 1'i oyna: üstte hedef taş ikonu + sayaç ve kalan hamle görünmeli, bunlar her geçerli swap'ten sonra güncellenmeli.
+- Level'ı kazanınca "Kazandın!" ve "Sonraki Level"/"Tekrar Dene"/"Level Seçimi" butonları çıkmalı; "Sonraki Level" doğru level verisini yüklemeli; level seçimine dönünce bir sonraki level artık açık görünmeli (tarayıcıyı kapatıp açsan bile, localStorage'da kalıcı).
+- Hamle biterken hedefe ulaşılmazsa "Kaybettin" ekranı çıkmalı (sadece "Tekrar Dene" ve "Level Seçimi", "Sonraki Level" yok).
+- `npm test` (42 test) ve `npm run build` hatasız geçmeli.
+
+Bilinen sorunlar / yapılamayanlar:
+- Level oynanırken (bitmeden) level seçimine dönecek bir buton yok — bkz. PLAN.md Öneriler.
+- Manuel tarayıcı testinde gerçek bir kazanmayı tetiklemek için, taşların canvas'taki tam piksel konumunu tahmin etmek yerine geçici bir debug hook (`window.__scene`) ile sahnenin gerçek tahta durumuna bakıp geçerli bir hamle hesaplandı; bu hook commit'lenmeden önce kaldırıldı. Gerçek bir telefonda parmakla oynanarak ek bir tur test edilmedi.
