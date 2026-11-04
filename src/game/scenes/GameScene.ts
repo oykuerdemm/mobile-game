@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { createRandomGrid } from '../logic/board';
+import { generateBoard } from '../logic/board';
 import { BOARD_HEIGHT, BOARD_WIDTH, type Grid } from '../logic/types';
 import { createTileTextures, textureKeyForTile, TILE_SIZE } from '../render/textures';
 
@@ -23,7 +23,7 @@ export class GameScene extends Phaser.Scene {
     this.boardOffsetX = (this.scale.width - boardPixelWidth) / 2;
     this.boardOffsetY = (this.scale.height - boardPixelHeight) / 2;
 
-    this.grid = createRandomGrid(BOARD_WIDTH, BOARD_HEIGHT);
+    this.grid = generateBoard(BOARD_WIDTH, BOARD_HEIGHT);
     this.renderBoard();
   }
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { areAdjacent, createEmptyGrid, createRandomGrid } from './board';
+import { areAdjacent, createEmptyGrid, findMatches, generateBoard } from './board';
 import { mulberry32 } from './rng';
-import { TILE_TYPES } from './types';
+import { TILE_TYPES, TileType, type Grid } from './types';
 
 describe('createEmptyGrid', () => {
   it('creates a grid with the given dimensions, all cells null', () => {
@@ -16,9 +16,9 @@ describe('createEmptyGrid', () => {
   });
 });
 
-describe('createRandomGrid', () => {
+describe('generateBoard', () => {
   it('fills every cell with a valid tile type', () => {
-    const grid = createRandomGrid(8, 8, mulberry32(1));
+    const grid = generateBoard(8, 8, mulberry32(1));
     expect(grid.length).toBe(8);
     for (const row of grid) {
       expect(row.length).toBe(8);
@@ -29,9 +29,65 @@ describe('createRandomGrid', () => {
   });
 
   it('is deterministic for a given seed', () => {
-    const a = createRandomGrid(8, 8, mulberry32(42));
-    const b = createRandomGrid(8, 8, mulberry32(42));
+    const a = generateBoard(8, 8, mulberry32(42));
+    const b = generateBoard(8, 8, mulberry32(42));
     expect(a).toEqual(b);
+  });
+
+  it('never contains a pre-existing 3+ match, across many seeds', () => {
+    for (let seed = 0; seed < 200; seed++) {
+      const grid = generateBoard(8, 8, mulberry32(seed));
+      expect(findMatches(grid).size).toBe(0);
+    }
+  });
+});
+
+describe('findMatches', () => {
+  function gridFrom(rows: TileType[][]): Grid {
+    return rows;
+  }
+
+  it('finds a horizontal run of 3', () => {
+    const grid = gridFrom([
+      [TileType.Red, TileType.Red, TileType.Red, TileType.Blue],
+      [TileType.Blue, TileType.Green, TileType.Yellow, TileType.Purple],
+    ]);
+    const matches = findMatches(grid);
+    expect(matches).toEqual(new Set(['0,0', '0,1', '0,2']));
+  });
+
+  it('finds a vertical run of 3', () => {
+    const grid = gridFrom([
+      [TileType.Red, TileType.Blue],
+      [TileType.Red, TileType.Green],
+      [TileType.Red, TileType.Yellow],
+    ]);
+    const matches = findMatches(grid);
+    expect(matches).toEqual(new Set(['0,0', '1,0', '2,0']));
+  });
+
+  it('finds an L-shaped overlap of horizontal and vertical runs', () => {
+    const grid = gridFrom([
+      [TileType.Red, TileType.Red, TileType.Red],
+      [TileType.Red, TileType.Blue, TileType.Green],
+      [TileType.Red, TileType.Yellow, TileType.Purple],
+    ]);
+    const matches = findMatches(grid);
+    expect(matches).toEqual(new Set(['0,0', '0,1', '0,2', '1,0', '2,0']));
+  });
+
+  it('returns an empty set when there are no matches', () => {
+    const grid = gridFrom([
+      [TileType.Red, TileType.Blue, TileType.Green],
+      [TileType.Blue, TileType.Green, TileType.Red],
+      [TileType.Green, TileType.Red, TileType.Blue],
+    ]);
+    expect(findMatches(grid).size).toBe(0);
+  });
+
+  it('does not match a run of only 2', () => {
+    const grid = gridFrom([[TileType.Red, TileType.Red, TileType.Blue]]);
+    expect(findMatches(grid).size).toBe(0);
   });
 });
 
